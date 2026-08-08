@@ -207,6 +207,10 @@ button {
   max-width: 940px;
   width: 100%;
   margin: 0 auto;
+  /* Grid items default to min-width:auto, which lets wide card content widen
+     the 1fr column and scroll the whole page sideways. Pin it so overflow is
+     handled by the element that is actually too wide. */
+  min-width: 0;
 }
 
 .page-head {
@@ -617,6 +621,11 @@ button {
   display: grid;
   gap: 5px;
   margin-bottom: 12px;
+  /* Columns size to their content, so a wide matrix scrolls inside the card
+     rather than pushing the page sideways at narrow widths. */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 2px;
 }
 
 .matrix-h {
