@@ -1,4 +1,4 @@
-import type { Mastery, Progress, Question, Record_ } from "../types";
+import type { Mastery, Progress, QuestState, Question, Record_ } from "../types";
 
 const DAY = 86_400_000;
 
@@ -7,14 +7,24 @@ export function todayKey(d = new Date()): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+export function emptyQuests(date = todayKey()): QuestState {
+  return { date, answered: 0, bestCombo: 0, reviewed: 0, tracks: [], claimed: [] };
+}
+
 export function emptyProgress(): Progress {
   return {
-    version: 1,
+    version: 2,
     records: {},
     days: {},
     lastActive: null,
     streakDays: 0,
     bestStreakDays: 0,
+    xpByPack: {},
+    coins: 0,
+    bestCombo: 0,
+    quests: emptyQuests(),
+    examDates: {},
+    flagged: [],
   };
 }
 
@@ -146,11 +156,15 @@ export function buildQueue(
   return shuffle(questions, seed).slice(0, size);
 }
 
-export function recordDay(progress: Progress, correct: boolean): Progress {
+export function recordDay(progress: Progress, correct: boolean, xp = 0): Progress {
   const key = todayKey();
   const days = { ...progress.days };
-  const cur = days[key] ?? { answered: 0, correct: 0 };
-  days[key] = { answered: cur.answered + 1, correct: cur.correct + (correct ? 1 : 0) };
+  const cur = days[key] ?? { answered: 0, correct: 0, xp: 0 };
+  days[key] = {
+    answered: cur.answered + 1,
+    correct: cur.correct + (correct ? 1 : 0),
+    xp: (cur.xp ?? 0) + xp,
+  };
 
   let { streakDays, bestStreakDays } = progress;
   if (progress.lastActive !== key) {

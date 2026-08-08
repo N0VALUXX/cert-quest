@@ -20,7 +20,7 @@ export function Flashcards({
 }: {
   pack: CertPack;
   progress: Progress;
-  onAnswer: (id: string, correct: boolean) => void;
+  onAnswer: (id: string, correct: boolean, ctx: { packId: string; combo: number }) => void;
 }) {
   const [order, setOrder] = useState(() => shuffle(pack.questions).map((q) => q.id));
   const [i, setI] = useState(0);
@@ -30,7 +30,9 @@ export function Flashcards({
   const mastery = masteryOf(progress.records[q.id]);
 
   function grade(correct: boolean) {
-    onAnswer(q.id, correct);
+    // Self-graded cards pay flat XP: there is no combo to build when you are
+    // marking your own work.
+    onAnswer(q.id, correct, { packId: pack.id, combo: 0 });
     setRevealed(false);
     setI((n) => (n + 1) % order.length);
   }
@@ -114,7 +116,7 @@ export function Flashcards({
 
 export function Browse({ pack, progress }: { pack: CertPack; progress: Progress }) {
   const [term, setTerm] = useState("");
-  const [filter, setFilter] = useState<"all" | Mastery | "explained">("all");
+  const [filter, setFilter] = useState<"all" | Mastery | "explained" | "flagged">("all");
   const [open, setOpen] = useState<string | null>(null);
 
   const list = useMemo(() => {
@@ -122,7 +124,9 @@ export function Browse({ pack, progress }: { pack: CertPack; progress: Progress 
     return pack.questions.filter((q) => {
       const m = masteryOf(progress.records[q.id]);
       if (filter === "explained" && !pack.enrichment[q.id]) return false;
-      if (filter !== "all" && filter !== "explained" && m !== filter) return false;
+      if (filter === "flagged" && !progress.flagged.includes(q.id)) return false;
+      if (filter !== "all" && filter !== "explained" && filter !== "flagged" && m !== filter)
+        return false;
       if (!t) return true;
       if (String(q.num) === t) return true;
       return (
@@ -156,6 +160,7 @@ export function Browse({ pack, progress }: { pack: CertPack; progress: Progress 
           <option value="solid">Solid</option>
           <option value="mastered">Mastered</option>
           <option value="explained">Has deep explanation</option>
+          <option value="flagged">Flagged ({progress.flagged.length})</option>
         </select>
       </div>
 
