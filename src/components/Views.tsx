@@ -139,7 +139,7 @@ export function Browse({ pack, progress }: { pack: CertPack; progress: Progress 
         <div className="search">
           <span style={{ color: "var(--dim)" }}>⌕</span>
           <input
-            placeholder="Search all 483 questions…"
+            placeholder={`Search all ${pack.questions.length} questions…`}
             value={term}
             onChange={(e) => setTerm(e.target.value)}
           />
@@ -237,15 +237,19 @@ export function Stats({
     return c;
   }, [pack, progress]);
 
+  // Scoped to the active pack. Progress records for every pack share one map,
+  // so iterating all of them would bleed Security+ answers into CISSP totals.
   const totals = useMemo(() => {
     let answered = 0;
     let correct = 0;
-    for (const r of Object.values(progress.records)) {
+    for (const q of pack.questions) {
+      const r = progress.records[q.id];
+      if (!r) continue;
       answered += r.seen;
       correct += r.correct;
     }
     return { answered, correct, pct: answered ? Math.round((correct / answered) * 100) : 0 };
-  }, [progress]);
+  }, [pack, progress]);
 
   const byDomain = useMemo(() => {
     const m = new Map<string, { seen: number; correct: number }>();

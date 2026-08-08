@@ -4,6 +4,36 @@ import { blankRecord, emptyProgress, recordDay, refreshStreak, schedule } from "
 
 const KEY = "cert-quest:progress:v1";
 
+/**
+ * Which pack the user last studied. Deliberately a separate key from the
+ * progress blob: it is a disposable UI preference, so losing it costs a click,
+ * while `KEY` holds the only irreplaceable data in the app and is never
+ * rewritten here. Progress records are keyed by namespaced question id
+ * (`cissp-1`, `secplus-1`), so packs share one map without colliding and
+ * adding a pack needs no migration.
+ */
+const PACK_KEY = "cert-quest:pack:v1";
+
+export function useActivePackId(fallback: string) {
+  const [packId, setPackId] = useState<string>(() => {
+    try {
+      return localStorage.getItem(PACK_KEY) ?? fallback;
+    } catch {
+      return fallback;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PACK_KEY, packId);
+    } catch {
+      // Same as progress: the session still works, the choice just will not stick.
+    }
+  }, [packId]);
+
+  return [packId, setPackId] as const;
+}
+
 function load(): Progress {
   try {
     const raw = localStorage.getItem(KEY);

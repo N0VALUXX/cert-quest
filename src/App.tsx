@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { defaultPack } from "./data";
-import { useProgress } from "./lib/store";
+import { defaultPack, packById, packs } from "./data";
+import { useActivePackId, useProgress } from "./lib/store";
 import { masteryOf } from "./lib/srs";
 import { Session } from "./components/Session";
 import { Browse, Flashcards, Stats } from "./components/Views";
@@ -35,7 +35,8 @@ const HEADINGS: Record<Tab, { h1: string; p: string }> = {
 };
 
 export default function App() {
-  const pack = defaultPack;
+  const [packId, setPackId] = useActivePackId(defaultPack.id);
+  const pack = useMemo(() => packById(packId), [packId]);
   const { progress, answer, reset, exportJSON, importJSON } = useProgress();
   const [tab, setTab] = useState<Tab>("drill");
 
@@ -68,8 +69,28 @@ export default function App() {
           <span className="brand-mark" aria-hidden />
           <span>
             cert-quest
-            <small>{pack.name} · {pack.questions.length} q</small>
+            <small>{pack.blurb}</small>
           </span>
+        </div>
+
+        <div className="pack-switch">
+          <label className="nav-label" htmlFor="pack-select">
+            Certification
+          </label>
+          <select
+            id="pack-select"
+            className="pack-select"
+            // The visible label is hidden in the narrow rail, so name it here too.
+            aria-label="Certification"
+            value={pack.id}
+            onChange={(e) => setPackId(e.target.value)}
+          >
+            {packs.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} — {p.questions.length} q
+              </option>
+            ))}
+          </select>
         </div>
 
         <nav className="nav">
@@ -109,7 +130,7 @@ export default function App() {
 
         {tab === "drill" && (
           <Session
-            key="drill"
+            key={`drill-${pack.id}`}
             pack={pack}
             progress={progress}
             onAnswer={answer}
@@ -121,7 +142,7 @@ export default function App() {
 
         {tab === "focus" && (
           <Session
-            key="focus"
+            key={`focus-${pack.id}`}
             pack={pack}
             progress={progress}
             onAnswer={answer}
@@ -133,7 +154,7 @@ export default function App() {
 
         {tab === "missed" && (
           <Session
-            key="missed"
+            key={`missed-${pack.id}`}
             pack={pack}
             progress={progress}
             onAnswer={answer}
@@ -143,12 +164,15 @@ export default function App() {
           />
         )}
 
-        {tab === "cards" && <Flashcards pack={pack} progress={progress} onAnswer={answer} />}
+        {tab === "cards" && (
+          <Flashcards key={pack.id} pack={pack} progress={progress} onAnswer={answer} />
+        )}
 
-        {tab === "browse" && <Browse pack={pack} progress={progress} />}
+        {tab === "browse" && <Browse key={pack.id} pack={pack} progress={progress} />}
 
         {tab === "stats" && (
           <Stats
+            key={pack.id}
             pack={pack}
             progress={progress}
             onReset={reset}
