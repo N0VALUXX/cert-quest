@@ -1,23 +1,26 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { defaultPack, packById, packs } from "./data";
 import { useActivePackId, useProgress } from "./lib/store";
+import { accentById } from "./lib/game";
 import { Session } from "./components/Session";
 import { Shell, type NavItem, type Tab } from "./components/Shell";
 import { Dashboard } from "./components/Dashboard";
-import { Browse, Flashcards, Stats } from "./components/Views";
+import { Profile } from "./components/Profile";
+import { MilestoneToast } from "./components/Milestone";
+import { Browse, Flashcards } from "./components/Views";
 
 const NAV: NavItem[] = [
   { id: "base", label: "Base" },
   { id: "drill", label: "Drill" },
   { id: "cards", label: "Flashcards" },
   { id: "browse", label: "Browse" },
-  { id: "stats", label: "Progress" },
+  { id: "profile", label: "Profile" },
 ];
 
 const HEADINGS: Partial<Record<Tab, { h1: string; p: string }>> = {
   drill: {
     h1: "Question drill",
-    p: "Answer under a running clock. Correct answers build a combo, and the combo multiplies the XP each answer is worth.",
+    p: "Answer under a running clock. New cards are worth the most and never break your combo — the queue and the scoring both point at what you do not know yet.",
   },
   cards: {
     h1: "Flashcard drill",
@@ -27,20 +30,40 @@ const HEADINGS: Partial<Record<Tab, { h1: string; p: string }>> = {
     h1: "Browse everything",
     p: "Search the full pool by keyword, question number, or domain. Every question shows its answer and explanation when opened.",
   },
-  stats: {
-    h1: "Progress",
-    p: "Where this track stands across the pool, and which domains are dragging.",
+  profile: {
+    h1: "Profile",
+    p: "Who you are, what you are working toward, and everything you have cleared so far.",
   },
 };
 
 export default function App() {
   const [packId, setPackId] = useActivePackId(defaultPack.id);
   const pack = useMemo(() => packById(packId), [packId]);
-  const { progress, answer, toggleFlag, setExamDate, reset, exportJSON, importJSON } = useProgress();
+  const {
+    progress,
+    answer,
+    toggleFlag,
+    setExamDate,
+    setProfile,
+    milestone,
+    dismissMilestone,
+    reset,
+    exportJSON,
+    importJSON,
+  } = useProgress();
   const [tab, setTab] = useState<Tab>("base");
   // Bumped when the dashboard hands off to the drill, so the session starts
   // immediately with the set the hero advertised instead of the setup screen.
   const [handoff, setHandoff] = useState(0);
+
+  // The chosen accent retints everything, because every surface colour in the
+  // stylesheet derives from --accent rather than a literal.
+  useEffect(() => {
+    const a = accentById(progress.profile.accent);
+    const root = document.documentElement;
+    root.style.setProperty("--accent", a.hex);
+    root.style.setProperty("--accent-deep", a.deep);
+  }, [progress.profile.accent]);
 
   const startDrill = useCallback(() => {
     setHandoff((n) => n + 1);
@@ -80,7 +103,6 @@ export default function App() {
           pack={pack}
           packs={packs}
           progress={progress}
-          onSelectPack={setPackId}
           onStartDrill={startDrill}
           onSetExamDate={setExamDate}
         />
@@ -106,16 +128,19 @@ export default function App() {
 
       {tab === "browse" && <Browse key={pack.id} pack={pack} progress={progress} />}
 
-      {tab === "stats" && (
-        <Stats
-          key={pack.id}
-          pack={pack}
+      {tab === "profile" && (
+        <Profile
+          packs={packs}
           progress={progress}
+          onSetProfile={setProfile}
+          onSetExamDate={setExamDate}
           onReset={reset}
           onExport={exportJSON}
           onImport={importJSON}
         />
       )}
+
+      {milestone && <MilestoneToast milestone={milestone} onDismiss={dismissMilestone} />}
     </Shell>
   );
 }

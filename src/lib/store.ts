@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DayStat, Progress, QuestState, Record_ } from "../types";
-import { blankRecord, emptyProgress, emptyQuests, recordDay, refreshStreak, schedule, todayKey } from "./srs";
-import { dailyQuests, wasDue, xpForAnswer } from "./game";
+import type { CertPack, DayStat, Progress, QuestState, Record_, UserProfile } from "../types";
+import {
+  blankRecord,
+  emptyProgress,
+  emptyQuests,
+  masteryOf,
+  recordDay,
+  refreshStreak,
+  schedule,
+  todayKey,
+} from "./srs";
+import { comboAfter, dailyQuests, domainMastery, wasDue, xpForAnswer } from "./game";
 
 const KEY = "cert-quest:progress:v1";
 
@@ -37,13 +46,18 @@ export function useActivePackId(fallback: string) {
 
 /* -------------------------------- migration ------------------------------- */
 
+const CURRENT_VERSION = 3;
+const READABLE_VERSIONS = [1, 2, 3];
+
 /**
- * Accepts a v1 or v2 blob and returns v2, or null if it is not ours.
+ * Accepts a v1, v2 or v3 blob and returns v3, or null if it is not ours.
  *
- * v1 had no XP, coins, quests, exam dates or flags. Those arrive at their
- * defaults and every `records` entry is carried across untouched, so a
- * returning user keeps their full scheduling history and streak. The storage
- * key is unchanged — only the version field inside it moves.
+ * v1 had no XP, quests, exam dates or flags; v2 added those plus a coin
+ * balance. Coins were removed in v3 — a currency with nothing to spend it on
+ * was just a second XP counter — and the field is simply no longer read, so
+ * older saves need no rewriting. Everything absent arrives at its default and
+ * every `records` entry is carried across untouched, so a returning user keeps
+ * their full scheduling history and streak. The storage key never changes.
  *
  * Deliberate: XP is *not* backfilled from existing records, so an established
  * user restarts at level 1 with their SRS state intact.
@@ -52,7 +66,7 @@ export function migrate(raw: unknown): Progress | null {
   if (!raw || typeof raw !== "object") return null;
   const p = raw as Record<string, unknown>;
 
-  if (p.version !== 1 && p.version !== 2) return null;
+  if (typeof p.version !== "number" || !READABLE_VERSIONS.includes(p.version)) return null;
   if (typeof p.records !== "object" || p.records === null) return null;
 
   const days: Record<string, DayStat> = {};
@@ -70,19 +84,26 @@ export function migrate(raw: unknown): Progress | null {
     claimed: Array.isArray(q.claimed) ? q.claimed : [],
   };
 
+  const prof = (p.profile ?? {}) as Partial<UserProfile>;
+
   return {
-    version: 2,
+    version: CURRENT_VERSION,
     records: p.records as Record<string, Record_>,
     days,
     lastActive: (p.lastActive as string | null) ?? null,
     streakDays: (p.streakDays as number) ?? 0,
     bestStreakDays: (p.bestStreakDays as number) ?? 0,
     xpByPack: (p.xpByPack as Record<string, number>) ?? {},
-    coins: (p.coins as number) ?? 0,
     bestCombo: (p.bestCombo as number) ?? 0,
     quests,
     examDates: (p.examDates as Record<string, string>) ?? {},
     flagged: Array.isArray(p.flagged) ? (p.flagged as string[]) : [],
+    profile: {
+      name: typeof prof.name === "string" ? prof.name : "",
+      accent: typeof prof.accent === "string" ? prof.accent : "violet",
+    },
+    restDays: (p.restDays as number) ?? 0,
+    clearedDomains: Array.isArray(p.clearedDomains) ? (p.clearedDomains as string[]) : [],
   };
 }
 
@@ -123,15 +144,32 @@ function recordCount(p: Progress): number {
 /* ---------------------------------- hook ---------------------------------- */
 
 export interface AnswerContext {
-  packId: string;
+  /** The pack itself, so a domain clear can be detected at the moment it happens. */
+  pack: CertPack;
   /** Combo length *before* this answer, so the multiplier shown is the one paid. */
   combo: number;
+}
+
+/** A domain crossing the clear threshold, surfaced once for celebration. */
+export interface Milestone {
+  packName: string;
+  domain: string;
 }
 
 export function useProgress() {
   const [progress, setProgress] = useState<Progress>(load);
   /** Set only by an explicit reset, which is the one time clearing is intended. */
   const wipeAuthorised = useRef(false);
+  /** Staged inside the state updater, surfaced once the write has committed. */
+  const pendingMilestone = useRef<Milestone | null>(null);
+  const [milestone, setMilestone] = useState<Milestone | null>(null);
+
+  useEffect(() => {
+    if (pendingMilestone.current) {
+      setMilestone(pendingMilestone.current);
+      pendingMilestone.current = null;
+    }
+  }, [progress]);
 
   useEffect(() => {
     try {
@@ -155,35 +193,37 @@ export function useProgress() {
 
   const answer = useCallback((questionId: string, correct: boolean, ctx: AnswerContext) => {
     setProgress((prev) => {
+      const packId = ctx.pack.id;
       const base = rollQuests(prev);
       const rec = base.records[questionId] ?? blankRecord();
       const due = wasDue(base, questionId);
-      const combo = correct ? ctx.combo + 1 : 0;
+      // Read the card's state *before* scheduling, so the award matches the
+      // figure the drill previewed to the user.
+      const mastery = masteryOf(base.records[questionId]);
+      const combo = comboAfter(correct, ctx.combo, mastery);
 
       const quests: QuestState = {
         ...base.quests,
         answered: base.quests.answered + 1,
         bestCombo: Math.max(base.quests.bestCombo, combo),
         reviewed: base.quests.reviewed + (due ? 1 : 0),
-        tracks: base.quests.tracks.includes(ctx.packId)
+        tracks: base.quests.tracks.includes(packId)
           ? base.quests.tracks
-          : [...base.quests.tracks, ctx.packId],
+          : [...base.quests.tracks, packId],
       };
 
       // Pay out any quest that just tipped over, once and only once.
       const staged: Progress = { ...base, quests };
       let bonusXp = 0;
-      let bonusCoins = 0;
       const claimed = [...quests.claimed];
       for (const quest of dailyQuests(staged)) {
         if (quest.cleared && !claimed.includes(quest.id)) {
           claimed.push(quest.id);
           bonusXp += quest.reward;
-          bonusCoins += Math.round(quest.reward / 10);
         }
       }
 
-      const gained = xpForAnswer(correct, ctx.combo) + bonusXp;
+      const gained = xpForAnswer(correct, ctx.combo, mastery) + bonusXp;
 
       const next: Progress = {
         ...base,
@@ -191,11 +231,24 @@ export function useProgress() {
         quests: { ...quests, claimed },
         xpByPack: {
           ...base.xpByPack,
-          [ctx.packId]: (base.xpByPack[ctx.packId] ?? 0) + gained,
+          [packId]: (base.xpByPack[packId] ?? 0) + gained,
         },
-        coins: base.coins + bonusCoins + (correct ? 1 : 0),
         bestCombo: Math.max(base.bestCombo, combo),
       };
+
+      // Did this answer just clear a domain? Checked against the post-answer
+      // state, and recorded so it is announced exactly once.
+      const domain = ctx.pack.questions.find((q) => q.id === questionId)?.domain;
+      if (domain) {
+        const key = `${packId}::${domain}`;
+        if (!next.clearedDomains.includes(key)) {
+          const stat = domainMastery(ctx.pack, next).find((d) => d.name === domain);
+          if (stat?.cleared) {
+            next.clearedDomains = [...next.clearedDomains, key];
+            pendingMilestone.current = { packName: ctx.pack.name, domain };
+          }
+        }
+      }
 
       return recordDay(next, correct, gained);
     });
@@ -209,6 +262,12 @@ export function useProgress() {
         : [...prev.flagged, questionId],
     }));
   }, []);
+
+  const setProfile = useCallback((patch: Partial<UserProfile>) => {
+    setProgress((prev) => ({ ...prev, profile: { ...prev.profile, ...patch } }));
+  }, []);
+
+  const dismissMilestone = useCallback(() => setMilestone(null), []);
 
   const setExamDate = useCallback((packId: string, date: string | null) => {
     setProgress((prev) => {
@@ -236,5 +295,16 @@ export function useProgress() {
     setProgress(rollQuests(refreshStreak(migrated)));
   }, []);
 
-  return { progress, answer, toggleFlag, setExamDate, reset, exportJSON, importJSON };
+  return {
+    progress,
+    answer,
+    toggleFlag,
+    setExamDate,
+    setProfile,
+    milestone,
+    dismissMilestone,
+    reset,
+    exportJSON,
+    importJSON,
+  };
 }

@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import type { CertPack, Progress } from "../types";
-import { examReadiness, levelFromXp, totalXp, weeklyXp } from "../lib/game";
+import { accentById, examReadiness, initialsOf, levelFromXp, totalXp, weeklyXp } from "../lib/game";
 
-export type Tab = "base" | "drill" | "cards" | "browse" | "stats";
+export type Tab = "base" | "drill" | "cards" | "browse" | "profile";
 
 export interface NavItem {
   id: Tab;
@@ -59,6 +59,8 @@ export function Shell({
   const xp = totalXp(progress);
   const level = levelFromXp(xp);
   const week = weeklyXp(progress);
+  const accent = accentById(progress.profile.accent);
+  const profileName = progress.profile.name.trim();
 
   return (
     <div className="shell">
@@ -86,13 +88,23 @@ export function Shell({
           <span>streak</span>
         </div>
 
-        <div className="hud-chip" title={`${progress.coins} coins`}>
-          <span className="hud-coin" aria-hidden />
-          <b>{progress.coins.toLocaleString()}</b>
-        </div>
+        {progress.restDays > 0 && (
+          <div
+            className="hud-chip optional"
+            title={`${progress.restDays} rest day${progress.restDays === 1 ? "" : "s"} banked — spent automatically if you miss a day`}
+          >
+            <span className="hud-rest" aria-hidden />
+            <b>{progress.restDays}</b>
+            <span>rest</span>
+          </div>
+        )}
 
-        <div className="hud-level" title={`Level ${level} · ${xp.toLocaleString()} XP total`}>
-          {level}
+        <div
+          className="hud-level"
+          title={`${profileName || "Level"} ${level} · ${xp.toLocaleString()} XP total`}
+          style={{ background: accent.hex, color: "var(--bg)", borderColor: accent.hex }}
+        >
+          {initialsOf(progress.profile.name) === "··" ? level : initialsOf(progress.profile.name)}
         </div>
       </header>
 
@@ -113,17 +125,8 @@ export function Shell({
             </div>
           </div>
 
-          <div>
-            <div className="nav-label">Train</div>
-            <nav className="nav">
-              {nav.map((n) => (
-                <button key={n.id} aria-current={tab === n.id} onClick={() => onTab(n.id)}>
-                  {n.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
+          {/* The rail owns tracks, the topbar owns modes. Rendering the mode
+              nav in both places made the user choose which nav bar to use. */}
           <div style={{ flex: 1 }} />
 
           <div className="goal-panel">

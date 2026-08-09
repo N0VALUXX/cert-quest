@@ -122,8 +122,15 @@ export interface QuestState {
   claimed: string[];
 }
 
+/** Local-only identity. Nothing here leaves the device. */
+export interface UserProfile {
+  name: string;
+  /** Key into ACCENTS — retints the whole UI, since everything derives from --accent. */
+  accent: string;
+}
+
 export interface Progress {
-  version: 2;
+  version: 3;
   records: Record<string, Record_>;
   /** Keyed by YYYY-MM-DD in local time. */
   days: Record<string, DayStat>;
@@ -133,11 +140,21 @@ export interface Progress {
   /** XP per pack id. Total XP is the sum — never stored separately, so the
    *  two can't drift apart. */
   xpByPack: Record<string, number>;
-  coins: number;
   bestCombo: number;
   quests: QuestState;
   /** Pack id -> YYYY-MM-DD exam date, for the runway panel. */
   examDates: Record<string, string>;
   /** Question ids flagged during a drill with F. */
   flagged: string[];
+  profile: UserProfile;
+  /**
+   * Banked days that absorb a gap in the study streak. Losing a long streak to
+   * one bad day is the single biggest reason people abandon a study habit.
+   */
+  restDays: number;
+  /**
+   * Domain milestones already celebrated, keyed `packId::domain`, so a clear
+   * is announced once rather than on every render after it happens.
+   */
+  clearedDomains: string[];
 }

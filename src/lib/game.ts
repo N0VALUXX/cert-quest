@@ -6,8 +6,34 @@ import { masteryOf, todayKey } from "./srs";
 /** Base award for a correct answer. Matches the mockup's xpPerCorrect default. */
 export const XP_PER_CORRECT = 40;
 
-/** A miss still pays a little — the goal is to keep people answering. */
-export const XP_PER_MISS = 5;
+/**
+ * A miss pays a share of what the card would have paid, never less than the
+ * floor. Missing something hard is worth more than missing something easy,
+ * and attempting a hard card you fail still beats grinding one you know.
+ */
+export const XP_MISS_SHARE = 0.25;
+export const XP_MISS_FLOOR = 5;
+
+/**
+ * XP scales with how much the card has left to teach you.
+ *
+ * The principle: XP is paid for *learning events*. Answering a card you have
+ * already mastered is not one, so it pays almost nothing — that is what kills
+ * the incentive to farm easy material instead of following the weak-first
+ * queue the app routes you to.
+ *
+ * Note this does not, and is not meant to, make a 50% run on new cards
+ * out-earn a flawless run on solid ones. Twenty successful retrievals really
+ * is more practice than ten, and pretending otherwise would distort the
+ * numbers past the point of being believable.
+ */
+export const MASTERY_XP_MULTIPLIER: Record<Mastery, number> = {
+  missed: 1.6,
+  unseen: 1.5,
+  learning: 1.25,
+  solid: 0.75,
+  mastered: 0.15,
+};
 
 /** Combo thresholds and the multiplier each one unlocks. Highest first. */
 const COMBO_TIERS: { at: number; multiplier: number }[] = [
@@ -27,12 +53,41 @@ export function nextComboTier(combo: number): { at: number; multiplier: number }
 }
 
 /**
- * XP for one answer. `combo` is the streak *before* this answer, so the
- * multiplier a player can see on screen is the one they actually get.
+ * XP for one answer. `combo` is the streak *before* this answer and `mastery`
+ * is the card's state *before* it, so the figure shown on the card ahead of
+ * time is exactly the figure paid.
  */
-export function xpForAnswer(correct: boolean, combo: number): number {
-  if (!correct) return XP_PER_MISS;
-  return Math.round(XP_PER_CORRECT * comboMultiplier(combo));
+export function xpForAnswer(correct: boolean, combo: number, mastery: Mastery = "solid"): number {
+  const base = XP_PER_CORRECT * MASTERY_XP_MULTIPLIER[mastery];
+  if (!correct) return Math.max(XP_MISS_FLOOR, Math.round(base * XP_MISS_SHARE));
+  return Math.round(base * comboMultiplier(combo));
+}
+
+/**
+ * The combo after an answer. Missing a card you have never seen does not break
+ * the run — you cannot be blamed for not knowing something new, and punishing
+ * it is what pushes people back toward material they have already mastered.
+ * Missing a card you have seen before still resets.
+ */
+export function comboAfter(correct: boolean, combo: number, mastery: Mastery): number {
+  if (correct) return combo + 1;
+  return mastery === "unseen" ? combo : 0;
+}
+
+/** Why a card is worth what it is worth, for the drill readout. */
+export function xpReason(mastery: Mastery): string {
+  switch (mastery) {
+    case "unseen":
+      return "new card";
+    case "missed":
+      return "relearning";
+    case "learning":
+      return "still shaky";
+    case "solid":
+      return "solid";
+    case "mastered":
+      return "already mastered";
+  }
 }
 
 /**
@@ -271,6 +326,56 @@ export function weeklyXp(progress: Progress, days = 7): WeekSummary {
   }
 
   return { xp, goal: WEEKLY_GOAL_XP, pct: Math.round((xp / WEEKLY_GOAL_XP) * 100), best };
+}
+
+/* -------------------------------- identity -------------------------------- */
+
+/**
+ * Accent choices. Each retints the whole interface, because every surface
+ * colour in the stylesheet derives from --accent rather than a literal.
+ */
+export const ACCENTS: { id: string; label: string; hex: string; deep: string }[] = [
+  { id: "violet", label: "Violet", hex: "#8b5cf6", deep: "#6d3bf0" },
+  { id: "cyan", label: "Cyan", hex: "#22b8cf", deep: "#0e7490" },
+  { id: "ember", label: "Ember", hex: "#f97362", deep: "#c2410c" },
+  { id: "lime", label: "Lime", hex: "#84cc16", deep: "#4d7c0f" },
+  { id: "rose", label: "Rose", hex: "#f472b6", deep: "#be185d" },
+  { id: "slate", label: "Slate", hex: "#7c8aa5", deep: "#475569" },
+];
+
+export function accentById(id: string) {
+  return ACCENTS.find((a) => a.id === id) ?? ACCENTS[0];
+}
+
+/** Up to two letters for the profile badge, falling back to a neutral mark. */
+export function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "··";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/**
+ * A title earned from what has actually been cleared, not from volume. Falls
+ * back through level so a new user still has something, but the good titles
+ * only come from clearing domains.
+ */
+export function earnedTitle(packs: CertPack[], progress: Progress): string {
+  const cleared: string[] = [];
+  for (const pack of packs) {
+    for (const d of domainMastery(pack, progress)) {
+      if (d.cleared) cleared.push(d.name);
+    }
+  }
+  if (cleared.length >= 5) return "Multi-domain specialist";
+  if (cleared.length > 1) return `${cleared.length} domains cleared`;
+  if (cleared.length === 1) return `${cleared[0]}, cleared`;
+
+  const level = levelFromXp(totalXp(progress));
+  if (level >= 10) return "Deep in the work";
+  if (level >= 5) return "Building momentum";
+  if (level >= 2) return "Getting started";
+  return "New recruit";
 }
 
 /* ------------------------------- exam runway ------------------------------ */

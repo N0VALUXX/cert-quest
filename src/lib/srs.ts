@@ -13,18 +13,20 @@ export function emptyQuests(date = todayKey()): QuestState {
 
 export function emptyProgress(): Progress {
   return {
-    version: 2,
+    version: 3,
     records: {},
     days: {},
     lastActive: null,
     streakDays: 0,
     bestStreakDays: 0,
     xpByPack: {},
-    coins: 0,
     bestCombo: 0,
     quests: emptyQuests(),
     examDates: {},
     flagged: [],
+    profile: { name: "", accent: "violet" },
+    restDays: 0,
+    clearedDomains: [],
   };
 }
 
@@ -166,21 +168,45 @@ export function recordDay(progress: Progress, correct: boolean, xp = 0): Progres
     xp: (cur.xp ?? 0) + xp,
   };
 
-  let { streakDays, bestStreakDays } = progress;
+  let { streakDays, bestStreakDays, restDays } = progress;
   if (progress.lastActive !== key) {
     const yesterday = todayKey(new Date(Date.now() - DAY));
     streakDays = progress.lastActive === yesterday ? streakDays + 1 : 1;
     bestStreakDays = Math.max(bestStreakDays, streakDays);
+    // Bank a rest day for every full week held, up to the cap.
+    if (streakDays > 0 && streakDays % REST_DAY_EVERY === 0) {
+      restDays = Math.min(REST_DAY_CAP, restDays + 1);
+    }
   }
 
-  return { ...progress, days, lastActive: key, streakDays, bestStreakDays };
+  return { ...progress, days, lastActive: key, streakDays, bestStreakDays, restDays };
 }
 
-/** Rebuilds the day streak on load so it decays when you skip days. */
+/** Most rest days that can be banked at once. */
+export const REST_DAY_CAP = 2;
+
+/** One rest day is earned for every this many consecutive days studied. */
+export const REST_DAY_EVERY = 7;
+
+/**
+ * Rebuilds the day streak on load so it decays when you skip days — except
+ * that banked rest days are spent first. A single missed day ending a long
+ * streak is the usual point at which people abandon a study habit, so the
+ * streak is made survivable rather than brittle.
+ */
 export function refreshStreak(progress: Progress): Progress {
   if (!progress.lastActive) return progress;
   const today = todayKey();
-  const yesterday = todayKey(new Date(Date.now() - DAY));
-  if (progress.lastActive === today || progress.lastActive === yesterday) return progress;
-  return { ...progress, streakDays: 0 };
+  if (progress.lastActive === today) return progress;
+
+  const last = new Date(`${progress.lastActive}T00:00:00`).getTime();
+  const now = new Date(`${today}T00:00:00`).getTime();
+  const gap = Math.round((now - last) / DAY);
+  if (gap <= 1) return progress; // studied yesterday, nothing to cover
+
+  const missed = gap - 1;
+  if (missed <= progress.restDays) {
+    return { ...progress, restDays: progress.restDays - missed };
+  }
+  return { ...progress, streakDays: 0, restDays: 0 };
 }

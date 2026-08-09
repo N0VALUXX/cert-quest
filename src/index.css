@@ -1412,6 +1412,195 @@ select.btn {
   border-color: var(--solid);
 }
 
+/* -------------------------------- identity ------------------------------- */
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 22px;
+  border-radius: var(--r-xl);
+  background: linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      transparent 60%
+    ),
+    var(--panel-alt);
+  border: 1px solid var(--accent-edge);
+  flex-wrap: wrap;
+}
+
+.identity-badge {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--bg);
+  flex: none;
+}
+
+.identity-body {
+  flex: 1;
+  min-width: 180px;
+}
+
+.name-input {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed transparent;
+  padding: 2px 0;
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  outline: none;
+}
+
+.name-input::placeholder {
+  color: var(--dim);
+}
+
+.name-input:hover,
+.name-input:focus {
+  border-bottom-color: var(--line-bright);
+}
+
+.identity-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-light);
+  margin-top: 4px;
+}
+
+.accent-row {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.accent-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+}
+
+.accent-dot[aria-pressed="true"] {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.identity-level {
+  text-align: right;
+  flex: none;
+}
+
+.identity-level b {
+  display: block;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent-light);
+}
+
+.identity-xp {
+  display: block;
+  font-size: 10px;
+  color: var(--dim);
+  margin-top: 5px;
+}
+
+.track-readiness {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+}
+
+.clear-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pass);
+  color: var(--bg);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex: none;
+}
+
+/* ------------------------------- milestone -------------------------------- */
+
+.milestone-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.milestone {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  max-width: 540px;
+  padding: 22px 24px;
+  border-radius: var(--r-xl);
+  background: var(--panel-alt);
+  border: 1px solid color-mix(in srgb, var(--pass) 45%, var(--line));
+  box-shadow: 0 24px 70px color-mix(in srgb, black 55%, transparent);
+  flex-wrap: wrap;
+}
+
+.milestone-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--pass);
+  color: var(--bg);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 700;
+  flex: none;
+}
+
+.milestone-body {
+  flex: 1;
+  min-width: 200px;
+}
+
+.milestone-body b {
+  display: block;
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 3px 0 5px;
+}
+
+.milestone-body p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-quiet);
+}
+
 /* ------------------------------- HUD atoms ------------------------------- */
 
 .eyebrow {
@@ -1903,6 +2092,16 @@ select.btn {
   margin-bottom: 12px;
 }
 
+.run-inline {
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.run-inline b {
+  font-weight: 700;
+}
+
 .drill-head .where {
   font-family: var(--mono);
   font-size: 11px;
@@ -1984,6 +2183,34 @@ select.btn {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--dim);
+}
+
+/* Makes the incentive legible before the answer, which is the whole point of
+   pricing cards by mastery. */
+.tile.worth {
+  border-color: color-mix(in srgb, var(--xp) 30%, var(--line-soft));
+}
+
+.worth-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 9px;
+}
+
+.worth-xp {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--xp);
+  line-height: 1;
+  flex: none;
+}
+
+.worth-why {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
 }
 
 .reward-strip {

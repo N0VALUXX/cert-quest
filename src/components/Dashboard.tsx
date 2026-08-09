@@ -7,32 +7,18 @@ import {
   dueForReview,
   examReadiness,
   examRunway,
-  levelFromXp,
   msUntilQuestReset,
-  packXp,
   questXpRemaining,
   weeklyXp,
-  XP_PER_CORRECT,
+  xpForAnswer,
 } from "../lib/game";
-import { buildQueue } from "../lib/srs";
+import { buildQueue, masteryOf, MASTERY_LABEL, MASTERY_ORDER } from "../lib/srs";
+import type { Mastery } from "../types";
 
 function countdown(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
   return `${h}h ${String(m).padStart(2, "0")}m`;
-}
-
-function idleLabel(progress: Progress, pack: CertPack): string {
-  let last = 0;
-  for (const q of pack.questions) {
-    const rec = progress.records[q.id];
-    if (rec && rec.last > last) last = rec.last;
-  }
-  if (last === 0) return "not started";
-  const days = Math.floor((Date.now() - last) / 86_400_000);
-  if (days === 0) return "on pace";
-  if (days === 1) return "1d idle";
-  return `${days}d idle`;
 }
 
 function overdueLabel(daysOverdue: number): { text: string; tone: string } {
@@ -45,14 +31,12 @@ export function Dashboard({
   pack,
   packs,
   progress,
-  onSelectPack,
   onStartDrill,
   onSetExamDate,
 }: {
   pack: CertPack;
   packs: CertPack[];
   progress: Progress;
-  onSelectPack: (id: string) => void;
   onStartDrill: () => void;
   onSetExamDate: (packId: string, date: string | null) => void;
 }) {
@@ -61,6 +45,12 @@ export function Dashboard({
   const readiness = examReadiness(pack, progress);
   const domains = useMemo(() => domainMastery(pack, progress), [pack, progress]);
   const due = useMemo(() => dueForReview(pack, progress), [pack, progress]);
+  const spread = useMemo(() => {
+    const c: Record<Mastery, number> = { unseen: 0, missed: 0, learning: 0, solid: 0, mastered: 0 };
+    for (const q of pack.questions) c[masteryOf(progress.records[q.id])]++;
+    return c;
+  }, [pack, progress]);
+
   const quests = dailyQuests(progress);
   const questsDone = quests.filter((q) => q.cleared).length;
   const week = weeklyXp(progress);
@@ -68,6 +58,12 @@ export function Dashboard({
   // The next set is the weakest slice of the pool, which is what the hero offers.
   const nextUp = useMemo(() => buildQueue(pack.questions, progress, "weak", 12), [pack, progress]);
   const focusDomain = nextUp[0]?.domain ?? domains[0]?.name ?? "the pool";
+  // Priced per card rather than at a flat rate — the weak queue is mostly
+  // unseen and missed cards, which are the ones worth the most.
+  const setValue = useMemo(
+    () => nextUp.reduce((sum, q) => sum + xpForAnswer(true, 0, masteryOf(progress.records[q.id])), 0),
+    [nextUp, progress]
+  );
   const clearedCount = domains.filter((d) => d.cleared).length;
 
   return (
@@ -98,8 +94,8 @@ export function Dashboard({
                   Continue drill · {Math.max(1, nextUp.length)} Q
                 </button>
                 <span className="hero-cost">
-                  ~{Math.max(1, Math.round(nextUp.length * 0.75))} min · +
-                  {(Math.max(1, nextUp.length) * XP_PER_CORRECT).toLocaleString()} XP
+                  ~{Math.max(1, Math.round(nextUp.length * 0.75))} min · up to +
+                  {setValue.toLocaleString()} XP
                 </span>
               </div>
             </div>
@@ -118,41 +114,9 @@ export function Dashboard({
           </div>
         </section>
 
-        <div className="track-cards">
-          {packs.map((p) => {
-            const r = examReadiness(p, progress);
-            const doms = domainMastery(p, progress);
-            const cleared = doms.filter((d) => d.cleared).length;
-            return (
-              <button
-                key={p.id}
-                className="track-card"
-                aria-current={p.id === pack.id}
-                onClick={() => onSelectPack(p.id)}
-              >
-                <div className="tile-head">
-                  <div>
-                    <div className="tile-title">{p.name}</div>
-                    <div className="mono" style={{ fontSize: 10, color: "var(--dim)" }}>
-                      {p.questions.length} questions
-                    </div>
-                  </div>
-                  <span className="pill">LV {levelFromXp(packXp(progress, p.id))}</span>
-                </div>
-                <div className="meter">
-                  <i style={{ width: `${r}%` }} />
-                </div>
-                <div className="track-card-foot">
-                  <span>
-                    {cleared} / {doms.length} domains
-                  </span>
-                  <span>{idleLabel(progress, p)}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
+        {/* The portfolio view of every track lives on the profile. This page is
+            about the track you are actually on, and the rail switches between
+            them — no third place showing the same readiness bars. */}
         <section className="tile">
           <div className="tile-head">
             <div className="tile-title">Domain mastery · {pack.name}</div>
@@ -174,6 +138,25 @@ export function Dashboard({
               <span className="pct">{d.readiness}%</span>
             </div>
           ))}
+          <div className="mastery-bar" style={{ marginTop: 14 }}>
+            {MASTERY_ORDER.map((m) =>
+              spread[m] > 0 ? (
+                <div
+                  key={m}
+                  style={{ flexGrow: spread[m], background: `var(--${m})` }}
+                  title={`${MASTERY_LABEL[m]}: ${spread[m]}`}
+                />
+              ) : null
+            )}
+          </div>
+          <div className="legend">
+            {MASTERY_ORDER.map((m) => (
+              <span key={m}>
+                <i style={{ background: `var(--${m})` }} />
+                {MASTERY_LABEL[m]} {spread[m]}
+              </span>
+            ))}
+          </div>
           <p style={{ margin: "10px 0 0", fontSize: 11, color: "var(--dim)" }}>
             A domain clears at {DOMAIN_CLEAR_AT}% readiness. Unseen and missed questions count zero,
             so this only moves when you actually get things right.

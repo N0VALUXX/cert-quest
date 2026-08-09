@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CertPack, Letter, Progress, Question } from "../types";
 import { buildQueue, masteryOf, type QueueMode } from "../lib/srs";
-import { comboMultiplier, nextComboTier, xpForAnswer } from "../lib/game";
+import { comboAfter, comboMultiplier, nextComboTier, xpForAnswer, xpReason } from "../lib/game";
 import { QuestionCard } from "./QuestionCard";
 
 interface Setup {
@@ -108,7 +108,7 @@ export function Session({
 }: {
   pack: CertPack;
   progress: Progress;
-  onAnswer: (id: string, correct: boolean, ctx: { packId: string; combo: number }) => void;
+  onAnswer: (id: string, correct: boolean, ctx: { pack: CertPack; combo: number }) => void;
   onToggleFlag: (id: string) => void;
   mode: QueueMode;
   title: string;
@@ -179,8 +179,9 @@ export function Session({
     (l: Letter) => {
       if (!q || revealed) return;
       const correct = l === q.answer;
-      const award = xpForAnswer(correct, combo);
-      const next = correct ? combo + 1 : 0;
+      const cardMastery = masteryOf(progress.records[q.id]);
+      const award = xpForAnswer(correct, combo, cardMastery);
+      const next = comboAfter(correct, combo, cardMastery);
 
       setChosen(l);
       setRevealed(true);
@@ -191,9 +192,9 @@ export function Session({
       setLastAward(award);
       setTimes((t) => [...t, Date.now() - questionShownAt.current]);
 
-      onAnswer(q.id, correct, { packId: pack.id, combo });
+      onAnswer(q.id, correct, { pack, combo });
     },
-    [q, revealed, combo, onAnswer, pack.id]
+    [q, revealed, combo, onAnswer, pack, progress.records]
   );
 
   const next = useCallback(() => {
@@ -289,16 +290,33 @@ export function Session({
   const correctCount = results.filter((r) => r.correct).length;
   const avgMs = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
   const flagged = progress.flagged.includes(q.id);
+  const cardMastery = masteryOf(progress.records[q.id]);
+  const cardWorth = xpForAnswer(true, combo, cardMastery);
+  const comboSafe = cardMastery === "unseen";
 
   return (
     <>
       <div className="drill-head">
         <span className="eyebrow">{pack.name}</span>
         <span className="where">{q.domain}</span>
-        <span className="mono" style={{ marginLeft: "auto", fontSize: 12 }}>
+        {/* Run stats live here rather than in a fourth side tile — this strip is
+            glanceable, the side panel was competing with the question. */}
+        <span className="mono run-inline" style={{ marginLeft: "auto" }}>
+          <b style={{ color: "var(--pass)" }}>{correctCount}</b> correct
+        </span>
+        <span className="mono run-inline">
+          <b style={{ color: "var(--fail)" }}>{results.length - correctCount}</b> missed
+        </span>
+        <span className="mono run-inline">
+          <b style={{ color: "var(--xp)" }}>+{runXp.toLocaleString()}</b> xp
+        </span>
+        <span className="mono run-inline">
+          <b>{avgMs ? elapsed(avgMs) : "—"}</b> avg
+        </span>
+        <span className="mono run-inline">
           {i + 1} / {queue.length}
         </span>
-        <span className="mono" style={{ fontSize: 12, color: "var(--dim)" }}>
+        <span className="mono run-inline" style={{ color: "var(--dim)" }}>
           {elapsed(Math.max(0, now - startedAt))}
         </span>
         <button
@@ -360,31 +378,29 @@ export function Session({
                 {tier
                   ? `${tier.at - combo} more for ×${tier.at} · ${tier.multiplier}× XP`
                   : `${multiplier}× XP — maxed`}
+                {comboSafe && (
+                  <>
+                    <br />
+                    New cards never break the run.
+                  </>
+                )}
               </span>
             </div>
           </div>
 
-          <div className="tile">
-            <div className="eyebrow" style={{ marginBottom: 11 }}>
-              This run
-            </div>
-            <div className="run-stats">
-              <div className="run-stat">
-                <b style={{ color: "var(--pass)" }}>{correctCount}</b>
-                <span>correct</span>
-              </div>
-              <div className="run-stat">
-                <b style={{ color: "var(--fail)" }}>{results.length - correctCount}</b>
-                <span>missed</span>
-              </div>
-              <div className="run-stat">
-                <b>{avgMs ? elapsed(avgMs) : "—"}</b>
-                <span>avg time</span>
-              </div>
-              <div className="run-stat">
-                <b style={{ color: "var(--xp)" }}>+{runXp.toLocaleString()}</b>
-                <span>xp so far</span>
-              </div>
+          <div className="tile worth">
+            <div className="eyebrow">This card is worth</div>
+            <div className="worth-row">
+              <span className="worth-xp">+{cardWorth}</span>
+              <span className="worth-why">
+                {xpReason(cardMastery)}
+                <br />
+                {cardMastery === "mastered"
+                  ? "you already know this one"
+                  : cardMastery === "unseen" || cardMastery === "missed"
+                    ? "worth more than a card you have nailed"
+                    : "keep going to lock it in"}
+              </span>
             </div>
           </div>
 
