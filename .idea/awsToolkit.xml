@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="toolkitAccountSettings">
+    <option name="activeProfile" value="profile:Liza" />
     <option name="activeRegion" value="us-west-1" />
+    <option name="recentlyUsedProfiles">
+      <list>
+        <option value="profile:Liza" />
+      </list>
+    </option>
     <option name="recentlyUsedRegions">
       <list>
         <option value="us-west-1" />
