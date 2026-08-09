@@ -1,270 +1,179 @@
-import { useMemo, useState } from "react";
-import type { CertPack, Progress } from "../types";
-import {
-  DOMAIN_CLEAR_AT,
-  dailyQuests,
-  domainMastery,
-  dueForReview,
-  examReadiness,
-  examRunway,
-  msUntilQuestReset,
-  questXpRemaining,
-  weeklyXp,
-  xpForAnswer,
-} from "../lib/game";
-import { buildQueue, masteryOf, MASTERY_LABEL, MASTERY_ORDER } from "../lib/srs";
-import type { Mastery } from "../types";
+import { useRef, useState } from "react";
+import type { CertPack } from "../content-model";
+import { attemptsForPack, daysUntil, domainMetrics, packReadiness } from "../model";
+import type { ProgressData } from "../progress";
 
-function countdown(ms: number): string {
-  const h = Math.floor(ms / 3_600_000);
-  const m = Math.floor((ms % 3_600_000) / 60_000);
-  return `${h}h ${String(m).padStart(2, "0")}m`;
+interface Props {
+  readonly packs: readonly CertPack[];
+  readonly pack: CertPack;
+  readonly progress: ProgressData;
+  readonly onSelectPack: (packId: string) => void;
+  readonly onStart: (mode: "priority" | "new" | "weak") => void;
+  readonly onOpenLabs: () => void;
+  readonly onSetExamDate: (date: string) => void;
+  readonly onExport: () => void;
+  readonly onImport: (file: File) => void;
 }
 
-function overdueLabel(daysOverdue: number): { text: string; tone: string } {
-  if (daysOverdue >= 1) return { text: "overdue", tone: "warn" };
-  if (daysOverdue >= 0) return { text: "today", tone: "" };
-  return { text: `+${Math.abs(daysOverdue)}d`, tone: "quiet" };
-}
-
-export function Dashboard({
-  pack,
-  packs,
-  progress,
-  onStartDrill,
-  onSetExamDate,
-}: {
-  pack: CertPack;
-  packs: CertPack[];
-  progress: Progress;
-  onStartDrill: () => void;
-  onSetExamDate: (packId: string, date: string | null) => void;
-}) {
-  const [editingDate, setEditingDate] = useState<string | null>(null);
-
-  const readiness = examReadiness(pack, progress);
-  const domains = useMemo(() => domainMastery(pack, progress), [pack, progress]);
-  const due = useMemo(() => dueForReview(pack, progress), [pack, progress]);
-  const spread = useMemo(() => {
-    const c: Record<Mastery, number> = { unseen: 0, missed: 0, learning: 0, solid: 0, mastered: 0 };
-    for (const q of pack.questions) c[masteryOf(progress.records[q.id])]++;
-    return c;
-  }, [pack, progress]);
-
-  const quests = dailyQuests(progress);
-  const questsDone = quests.filter((q) => q.cleared).length;
-  const week = weeklyXp(progress);
-
-  // The next set is the weakest slice of the pool, which is what the hero offers.
-  const nextUp = useMemo(() => buildQueue(pack.questions, progress, "weak", 12), [pack, progress]);
-  const focusDomain = nextUp[0]?.domain ?? domains[0]?.name ?? "the pool";
-  // Priced per card rather than at a flat rate — the weak queue is mostly
-  // unseen and missed cards, which are the ones worth the most.
-  const setValue = useMemo(
-    () => nextUp.reduce((sum, q) => sum + xpForAnswer(true, 0, masteryOf(progress.records[q.id])), 0),
-    [nextUp, progress]
-  );
-  const clearedCount = domains.filter((d) => d.cleared).length;
+export function Dashboard({ packs, pack, progress, onSelectPack, onStart, onOpenLabs, onSetExamDate, onExport, onImport }: Props) {
+  const [mobileMenu, setMobileMenu] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const metrics = domainMetrics(pack, progress);
+  const readiness = packReadiness(pack, progress);
+  const attempts = attemptsForPack(progress, pack.id);
+  const latestSeven = progress.attempts.filter((attempt) => attempt.occurredAt >= Date.now() - 7 * 86_400_000);
+  const xp = progress.attempts.reduce((sum, attempt) => sum + attempt.xp, 0);
+  const level = 1 + Math.floor(xp / 250);
+  const todayKey = localDay(Date.now());
+  const today = progress.attempts.filter((attempt) => localDay(attempt.occurredAt) === todayKey);
+  const todayDomains = new Set(today.map((attempt) => attempt.domain)).size;
+  const examDate = progress.preferences.examDates[pack.id] ?? "";
+  const remaining = daysUntil(examDate);
+  const explained = pack.questions.filter((question) => pack.enrichment[question.id] !== undefined).length;
 
   return (
-    <div className="dash">
-      <div className="dash-main">
-        <section className="hero">
-          <div className="hero-inner">
-            <div className="hero-copy">
-              <div className="hero-crumb">
-                <span className="eyebrow">Resume run</span>
-                <span className="sep" aria-hidden />
-                <span className="where">
-                  {pack.name} · {focusDomain}
-                </span>
-              </div>
-              <h2>
-                {nextUp.length === 0
-                  ? "Everything here is scheduled"
-                  : `${nextUp.length} questions queued on your weakest ground`}
-              </h2>
-              <p>
-                {nextUp.length === 0
-                  ? "Nothing is due on this track right now. Switch tracks or drill anyway to push mastery higher."
-                  : "Adaptive set weighted to the objectives you are shakiest on. Clearing it moves this track toward exam ready."}
-              </p>
-              <div className="hero-actions">
-                <button className="btn primary" onClick={onStartDrill}>
-                  Continue drill · {Math.max(1, nextUp.length)} Q
-                </button>
-                <span className="hero-cost">
-                  ~{Math.max(1, Math.round(nextUp.length * 0.75))} min · up to +
-                  {setValue.toLocaleString()} XP
-                </span>
-              </div>
-            </div>
-
-            <div className="dial" style={{ ["--pct" as string]: readiness }}>
-              <div className="dial-core">
-                <div>
-                  <b>
-                    {readiness}
-                    <i>%</i>
-                  </b>
-                  <span>EXAM READY</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* The portfolio view of every track lives on the profile. This page is
-            about the track you are actually on, and the rail switches between
-            them — no third place showing the same readiness bars. */}
-        <section className="tile">
-          <div className="tile-head">
-            <div className="tile-title">Domain mastery · {pack.name}</div>
-            <span className="pill quiet">
-              {clearedCount} / {domains.length} cleared
-            </span>
-          </div>
-          {domains.map((d) => (
-            <div className="domain-row" key={d.name}>
-              <span className="txt">{d.name}</span>
-              <span className="bar">
-                <i
-                  style={{
-                    width: `${d.readiness}%`,
-                    background: d.cleared ? "var(--pass)" : "var(--accent)",
-                  }}
-                />
-              </span>
-              <span className="pct">{d.readiness}%</span>
-            </div>
-          ))}
-          <div className="mastery-bar" style={{ marginTop: 14 }}>
-            {MASTERY_ORDER.map((m) =>
-              spread[m] > 0 ? (
-                <div
-                  key={m}
-                  style={{ flexGrow: spread[m], background: `var(--${m})` }}
-                  title={`${MASTERY_LABEL[m]}: ${spread[m]}`}
-                />
-              ) : null
-            )}
-          </div>
-          <div className="legend">
-            {MASTERY_ORDER.map((m) => (
-              <span key={m}>
-                <i style={{ background: `var(--${m})` }} />
-                {MASTERY_LABEL[m]} {spread[m]}
-              </span>
-            ))}
-          </div>
-          <p style={{ margin: "10px 0 0", fontSize: 11, color: "var(--dim)" }}>
-            A domain clears at {DOMAIN_CLEAR_AT}% readiness. Unseen and missed questions count zero,
-            so this only moves when you actually get things right.
-          </p>
-        </section>
-      </div>
-
-      <div className="dash-side">
-        <section className="tile">
-          <div className="tile-head">
-            <div className="tile-title">Daily quests</div>
-            <span className="pill quiet">resets in {countdown(msUntilQuestReset())}</span>
-          </div>
-          {quests.map((q) => (
-            <div className={`quest-row${q.cleared ? " done" : ""}`} key={q.id}>
-              <span className="quest-check" aria-hidden>
-                {q.cleared ? "✓" : ""}
-              </span>
-              <span className="quest-body">
-                <b>{q.label}</b>
-                {!q.cleared && (
-                  <span className="meter">
-                    <i style={{ width: `${(q.done / q.target) * 100}%` }} />
-                  </span>
-                )}
-              </span>
-              <span className="quest-reward">+{q.reward}</span>
-            </div>
-          ))}
-          <div className="track-card-foot">
-            <span>
-              {questsDone} / {quests.length} cleared
-            </span>
-            <span>{questXpRemaining(progress).toLocaleString()} XP left</span>
-          </div>
-        </section>
-
-        <section className="tile">
-          <div className="tile-head">
-            <div className="tile-title">Due for review</div>
-            <span className="pill">{due.total} cards</span>
-          </div>
-          {due.total === 0 ? (
-            <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>
-              Nothing is due on this track. Cards appear here once you have answered them and their
-              interval comes round.
-            </p>
-          ) : (
-            due.groups.slice(0, 5).map((g) => {
-              const label = overdueLabel(g.daysOverdue);
-              return (
-                <div className="side-row" key={g.domain}>
-                  <span className="track-meta">
-                    <b>{g.domain}</b>
-                    <span>{g.count} cards</span>
-                  </span>
-                  <span className={`pill ${label.tone}`}>{label.text}</span>
-                </div>
-              );
-            })
-          )}
-        </section>
-
-        <section className="tile">
-          <div className="tile-head">
-            <div className="tile-title">Exam runway</div>
-          </div>
-          {packs.map((p) => {
-            const run = examRunway(progress, p.id);
-            const editing = editingDate === p.id;
+    <div className="app-shell">
+      <aside className={`sidebar ${mobileMenu ? "is-open" : ""}`}>
+        <div className="brand"><span className="brand-mark">CQ</span><div><strong>CERT QUEST</strong><small>Competence, mapped.</small></div></div>
+        <nav aria-label="Primary navigation">
+          <a className="nav-item is-active" href="#overview"><span>⌁</span>Mission control</a>
+          <a className="nav-item" href="#domains"><span>◫</span>Domain map</a>
+          <button className="nav-item" onClick={onOpenLabs}><span>◇</span>Field labs</button>
+        </nav>
+        <div className="sidebar-section">
+          <p>YOUR TRACKS</p>
+          {packs.map((candidate) => {
+            const candidateReadiness = packReadiness(candidate, progress);
             return (
-              <div className="side-row" key={p.id}>
-                <span className="track-meta">
-                  <b>{p.name}</b>
-                  <span>
-                    {run.daysLeft === null
-                      ? "no date set"
-                      : run.daysLeft >= 0
-                        ? `${run.date} · booked`
-                        : `${run.date} · passed`}
-                  </span>
-                </span>
-                {editing ? (
-                  <input
-                    className="date-input"
-                    type="date"
-                    autoFocus
-                    defaultValue={run.date ?? ""}
-                    aria-label={`Exam date for ${p.name}`}
-                    onBlur={() => setEditingDate(null)}
-                    onChange={(e) => {
-                      onSetExamDate(p.id, e.target.value || null);
-                      setEditingDate(null);
-                    }}
-                  />
-                ) : (
-                  <button className="runway-set" onClick={() => setEditingDate(p.id)}>
-                    {run.daysLeft === null ? "set date" : `${Math.abs(run.daysLeft)}d`}
-                  </button>
-                )}
-              </div>
+              <button className={`track-button ${candidate.id === pack.id ? "is-active" : ""}`} onClick={() => { onSelectPack(candidate.id); setMobileMenu(false); }} key={candidate.id}>
+                <span className="track-monogram">{candidate.name.slice(0, 2).toUpperCase()}</span>
+                <span><strong>{candidate.name}</strong><small>{candidate.questions.length} items</small></span>
+                <em>{candidateReadiness}%</em>
+              </button>
             );
           })}
-          <p style={{ margin: "10px 0 0", fontSize: 11, color: "var(--dim)" }}>
-            At {Math.round(week.xp / 7).toLocaleString()} XP/day this week.
-          </p>
+        </div>
+        <div className="sidebar-footer">
+          <div className="level-chip"><span>LV</span><strong>{level}</strong><div><small>{xp % 250} / 250 evidence XP</small><i><b style={{ width: `${((xp % 250) / 250) * 100}%` }} /></i></div></div>
+          <button className="text-button" onClick={onExport}>Download progress backup</button>
+          <button className="text-button" onClick={() => fileInput.current?.click()}>Restore a backup</button>
+          <input className="sr-only" ref={fileInput} type="file" accept="application/json" onChange={(event) => { const file = event.target.files?.[0]; if (file !== undefined) onImport(file); }} />
+        </div>
+      </aside>
+
+      <main className="dashboard" id="overview">
+        <header className="dashboard-topbar">
+          <button className="mobile-menu" onClick={() => setMobileMenu((current) => !current)} aria-expanded={mobileMenu} aria-label="Toggle navigation">☰</button>
+          <div><span>ACTIVE TRACK</span><strong>{pack.name}</strong></div>
+          <div className="privacy-badge"><span>●</span> Progress stays on this device</div>
+        </header>
+
+        <section className="hero-grid">
+          <article className="hero-copy">
+            <p className="eyebrow">MISSION BRIEF · {formatDay()}</p>
+            <h1>Make the uncertain<br /><em>smaller.</em></h1>
+            <p className="hero-lede">You do not need to feel ready all at once. Today’s route targets the evidence gaps that matter most.</p>
+            <div className="hero-actions">
+              <button className="button button--primary" onClick={() => onStart("priority")}>Begin today’s route <span>→</span></button>
+              <button className="button button--ghost" onClick={onOpenLabs}>Open a field lab</button>
+            </div>
+            <div className="session-note"><span className="pulse-dot" />Suggested session: <strong>10 questions · about 14 min</strong></div>
+          </article>
+
+          <article className="readiness-card">
+            <div className="readiness-card__top"><span>READINESS SIGNAL</span><span className="signal-status">{readiness >= 75 ? "STEADY" : readiness > 0 ? "FORMING" : "UNCALIBRATED"}</span></div>
+            <div className="readiness-core">
+              <div className="readiness-ring" style={{ "--readiness": `${readiness * 3.6}deg` } as React.CSSProperties}>
+                <div><strong>{readiness}</strong><span>%</span><small>conservative</small></div>
+              </div>
+              <div className="readiness-context">
+                <span>{attempts.length} observations</span>
+                <strong>{explained} source-backed explanations</strong>
+                <p>Readiness reflects correct, independent answers and coverage—not time spent or XP.</p>
+              </div>
+            </div>
+            <div className="exam-row">
+              <div><span>EXAM WINDOW</span><strong>{remaining === null ? "Not set" : remaining === 0 ? "Today" : `${remaining} days`}</strong></div>
+              <label><span className="sr-only">Exam date</span><input type="date" value={examDate} onChange={(event) => onSetExamDate(event.target.value)} /></label>
+            </div>
+          </article>
         </section>
-      </div>
+
+        <section className="route-section">
+          <div className="section-heading"><div><p className="eyebrow">TODAY’S ROUTE</p><h2>Three useful moves</h2></div><span>Chosen from your weakest evidence</span></div>
+          <div className="route-grid">
+            <RouteCard index="01" tone="amber" title="Repair weak signals" description={metrics[0] === undefined ? "Start mapping your first domain." : `${metrics[0].domain} is your least certain domain.`} meta={`${metrics[0]?.readiness ?? 0}% current signal`} action="Start repair set" onClick={() => onStart("weak")} />
+            <RouteCard index="02" tone="teal" title="Expand coverage" description={`${Math.max(0, pack.questions.length - new Set(attempts.map((attempt) => attempt.questionId)).size)} questions remain unseen.`} meta="Novel material earns more XP" action="Learn something new" onClick={() => onStart("new")} />
+            <RouteCard index="03" tone="violet" title="Apply, don’t recite" description={`${pack.exercises?.length ?? 0} authored labs turn concepts into decisions.`} meta="Multiple interaction formats" action="Enter field lab" onClick={onOpenLabs} />
+          </div>
+        </section>
+
+        <section className="lower-grid" id="domains">
+          <article className="domain-card">
+            <div className="section-heading compact"><div><p className="eyebrow">DOMAIN MAP</p><h2>Where confidence is forming</h2></div><span>Conservative estimates</span></div>
+            <div className="domain-list">
+              {metrics.map((metric, index) => (
+                <div className="domain-row" key={metric.domain}>
+                  <span className="domain-index">{String(index + 1).padStart(2, "0")}</span>
+                  <div className="domain-label"><strong>{metric.domain}</strong><small>{metric.seen} of {metric.total} mapped</small></div>
+                  <div className="domain-bar"><i style={{ width: `${metric.readiness}%` }} /></div>
+                  <strong className={`domain-score is-${metric.status}`}>{metric.readiness}%</strong>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <aside className="quest-card">
+            <div className="quest-orbit" aria-hidden="true"><i /><i /><i /></div>
+            <p className="eyebrow">DAILY FIELD NOTES</p>
+            <h2>Consistency without punishment.</h2>
+            <p>Your rhythm is measured over a week. Missing a day does not erase the work behind you.</p>
+            <div className="week-dots">
+              {lastSevenDays().map((day) => <span className={latestSeven.some((attempt) => localDay(attempt.occurredAt) === day.key) ? "is-done" : day.key === todayKey ? "is-today" : ""} key={day.key}><i>{day.label}</i><b /></span>)}
+            </div>
+            <div className="quest-list">
+              <Quest label="Map five questions" value={today.length} target={5} />
+              <Quest label="Touch two domains" value={todayDomains} target={2} />
+            </div>
+          </aside>
+        </section>
+      </main>
     </div>
   );
+}
+
+interface RouteCardProps {
+  readonly index: string;
+  readonly tone: string;
+  readonly title: string;
+  readonly description: string;
+  readonly meta: string;
+  readonly action: string;
+  readonly onClick: () => void;
+}
+
+function RouteCard({ index, tone, title, description, meta, action, onClick }: RouteCardProps) {
+  return <article className={`route-card route-card--${tone}`}><span className="route-index">{index}</span><div className="route-glyph" aria-hidden="true"><i /></div><h3>{title}</h3><p>{description}</p><small>{meta}</small><button onClick={onClick}>{action}<span>→</span></button></article>;
+}
+
+function Quest({ label, value, target }: { readonly label: string; readonly value: number; readonly target: number }) {
+  const complete = value >= target;
+  return <div className={complete ? "quest is-complete" : "quest"}><span>{complete ? "✓" : "○"}</span><div><strong>{label}</strong><i><b style={{ width: `${Math.min(100, (value / target) * 100)}%` }} /></i></div><em>{Math.min(value, target)}/{target}</em></div>;
+}
+
+function localDay(timestamp: number): string {
+  const date = new Date(timestamp);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function lastSevenDays(): readonly { readonly key: string; readonly label: string }[] {
+  return Array.from({ length: 7 }, (_, offset) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - offset));
+    return { key: localDay(date.getTime()), label: date.toLocaleDateString(undefined, { weekday: "narrow" }) };
+  });
+}
+
+function formatDay(): string {
+  return new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }).toUpperCase();
 }

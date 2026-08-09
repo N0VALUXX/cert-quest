@@ -1,6 +1,6 @@
 // Hand-authored starter bank written against the published CompTIA A+
 // 220-1201 / 220-1202 exam objectives. Not OCR-derived — safe to edit directly.
-import type { Question } from "../../types";
+import type { Question } from "../../content-model";
 
 export const aplusQuestions: Question[] = [
 {id:"aplus-1",num:1,domain:"Hardware",stem:"A technician needs to configure four drives so that the array survives the loss of any single drive while still using the majority of the raw capacity. Which RAID level meets this requirement?",options:[{l:"A",t:"RAID 0"}, {l:"B",t:"RAID 1"}, {l:"C",t:"RAID 5"}, {l:"D",t:"JBOD"}],answer:"C"},
@@ -25,3 +25,4 @@ export const aplusQuestions: Question[] = [
     outputs:[{label:"Total raw capacity",headline:true,term:{op:"mul",args:[{ref:"drives"},{ref:"size"}]},unit:"TB",
               note:"Before any mirroring or parity is accounted for."}]}},
 ];
+

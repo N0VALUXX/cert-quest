@@ -1,5 +1,5 @@
 // Auto-generated from CISSP_Study_Questions.pdf via OCR. 483 questions.
-import type { Question } from "../../types";
+import type { Question } from "../../content-model";
 
 export const cisspQuestions: Question[] = [
 {id:"cissp-1",num:1,domain:"Security Operations",stem:"Physical assets defined in an organization's business impact analysis (BIA) could include which of the following?",options:[{l:"A",t:"Personal belongings of organizational staff members"}, {l:"B",t:"Disaster recovery (DR) line-item revenues"}, {l:"C",t:"Cloud-based applications"}, {l:"D",t:"Supplies kept off-site a remote facility"}],answer:"D"},

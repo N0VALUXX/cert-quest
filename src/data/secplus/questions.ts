@@ -1,7 +1,7 @@
 // Hand-authored starter bank written against the published CompTIA Security+
 // SY0-701 exam objectives. Unlike the CISSP pack these are not OCR-derived from
 // a question dump, so they are safe to edit directly — fix and extend at will.
-import type { Question } from "../../types";
+import type { Question } from "../../content-model";
 
 export const secplusQuestions: Question[] = [
 {id:"secplus-1",num:1,domain:"General Security Concepts",stem:"A company needs to prove that a specific employee approved a wire transfer and that the employee cannot later deny having done so. Which security property does this requirement describe?",options:[{l:"A",t:"Confidentiality"}, {l:"B",t:"Integrity"}, {l:"C",t:"Non-repudiation"}, {l:"D",t:"Availability"}],answer:"C"},
@@ -29,3 +29,4 @@ export const secplusQuestions: Question[] = [
     outputs:[{label:"Single loss expectancy",headline:true,term:{op:"mul",args:[{ref:"av"},{ref:"ef"}]},
               note:"What one occurrence costs. ALE = SLE × ARO, and ARO is how many times a year you expect it."}]}},
 ];
+

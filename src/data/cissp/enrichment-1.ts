@@ -1,4 +1,4 @@
-import type { Enrichment } from "../../types";
+import type { Enrichment } from "../../content-model";
 
 export const batch1: Record<string, Enrichment> = {
   "cissp-1": {
@@ -400,3 +400,4 @@ export const batch1: Record<string, Enrichment> = {
     ],
   },
 };
+

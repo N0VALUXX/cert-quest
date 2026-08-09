@@ -1,4 +1,4 @@
-import type { Exercise, Visual } from "../../types";
+import type { Exercise, Visual } from "../../content-model";
 
 /**
  * Hand-authored exercises. These are data, not components — adding one never
@@ -139,3 +139,4 @@ export const netplusExercises: Exercise[] = [
     solution: { correct: ["ip", "routing", "icmp"] },
   },
 ];
+

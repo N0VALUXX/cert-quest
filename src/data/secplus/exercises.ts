@@ -1,4 +1,4 @@
-import type { Exercise } from "../../types";
+import type { Exercise } from "../../content-model";
 
 const meta = { packId: "secplus", domain: "General Security Concepts" };
 
@@ -101,3 +101,4 @@ export const secplusExercises: Exercise[] = [
     solution: { correct: false },
   },
 ];
+

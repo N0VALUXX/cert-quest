@@ -1,4 +1,4 @@
-import type { CertPack } from "../../types";
+﻿import type { CertPack } from "../../content-model";
 import { cysaQuestions } from "./questions";
 import { batch1 } from "./enrichment-1";
 
@@ -9,3 +9,4 @@ export const cysa: CertPack = {
   questions: cysaQuestions,
   enrichment: { ...batch1 },
 };
+

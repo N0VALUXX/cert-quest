@@ -1,4 +1,4 @@
-import type { CertPack } from "../../types";
+﻿import type { CertPack } from "../../content-model";
 import { secplusQuestions } from "./questions";
 import { batch1 } from "./enrichment-1";
 import { secplusExercises } from "./exercises";
@@ -11,3 +11,4 @@ export const secplus: CertPack = {
   enrichment: { ...batch1 },
   exercises: secplusExercises,
 };
+

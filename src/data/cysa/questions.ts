@@ -1,6 +1,6 @@
 // Hand-authored starter bank written against the published CompTIA CySA+
 // CS0-003 exam objectives. Not OCR-derived — safe to edit directly.
-import type { Question } from "../../types";
+import type { Question } from "../../content-model";
 
 export const cysaQuestions: Question[] = [
 {id:"cysa-1",num:1,domain:"Security Operations",stem:"An analyst wants vulnerability scan results that reflect missing patches and insecure configurations inside the operating system rather than only what is exposed on the network. Which scan type should be used?",options:[{l:"A",t:"Credentialed scan"}, {l:"B",t:"Non-credentialed scan"}, {l:"C",t:"Passive network scan"}, {l:"D",t:"Port scan"}],answer:"A"},
@@ -16,3 +16,4 @@ export const cysaQuestions: Question[] = [
 {id:"cysa-11",num:11,domain:"Security Operations",stem:"Which log source would BEST help an analyst determine which internal host contacted a known malicious domain?",options:[{l:"A",t:"DNS query logs"}, {l:"B",t:"Printer spooler logs"}, {l:"C",t:"Physical badge access logs"}, {l:"D",t:"Application crash dumps"}],answer:"A"},
 {id:"cysa-12",num:12,domain:"Incident Response",stem:"After an incident is resolved, the team meets to review what happened and what should change. What is the PRIMARY purpose of this activity?",options:[{l:"A",t:"To assign blame for the incident"}, {l:"B",t:"To improve controls and the response process for future incidents"}, {l:"C",t:"To satisfy the cyber insurance provider"}, {l:"D",t:"To close the ticket in the tracking system"}],answer:"B"},
 ];
+

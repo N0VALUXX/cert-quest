@@ -1,6 +1,6 @@
 // Hand-authored starter bank written against the published CompTIA Network+
 // N10-009 exam objectives. Not OCR-derived — safe to edit directly.
-import type { Question } from "../../types";
+import type { Question } from "../../content-model";
 
 export const netplusQuestions: Question[] = [
 {id:"netplus-1",num:1,domain:"Networking Concepts",stem:"At which layer of the OSI model does a router make its forwarding decisions?",options:[{l:"A",t:"Layer 2, the data link layer"}, {l:"B",t:"Layer 3, the network layer"}, {l:"C",t:"Layer 4, the transport layer"}, {l:"D",t:"Layer 7, the application layer"}],answer:"B"},
@@ -35,3 +35,4 @@ export const netplusQuestions: Question[] = [
       {label:"Addresses per subnet",term:{op:"pow",args:[{value:2},{op:"sub",args:[{value:32},{ref:"prefix"}]}]}},
       {label:"Subnets per /24",term:{op:"div",args:[{value:256},{op:"pow",args:[{value:2},{op:"sub",args:[{value:32},{ref:"prefix"}]}]}]}}]}},
 ];
+

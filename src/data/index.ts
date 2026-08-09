@@ -1,4 +1,4 @@
-import type { CertPack } from "../types";
+import type { CertPack } from "../content-model";
 import { cissp } from "./cissp";
 import { secplus } from "./secplus";
 import { netplus } from "./netplus";
@@ -51,3 +51,4 @@ if (import.meta.env.DEV) {
     }
   }
 }
+
