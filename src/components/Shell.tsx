@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { CertPack, Progress } from "../types";
 import { accentById, examReadiness, initialsOf, levelFromXp, totalXp, weeklyXp } from "../lib/game";
 
-export type Tab = "base" | "drill" | "cards" | "browse" | "profile";
+export type Tab = "base" | "drill" | "exercises" | "cards" | "browse" | "profile";
 
 export interface NavItem {
   id: Tab;

@@ -19,4 +19,13 @@ export const secplusQuestions: Question[] = [
 {id:"secplus-13",num:13,domain:"Security Architecture",stem:"A hospital wants to keep its medical imaging devices from reaching the internet or the general office network, while still allowing a specific imaging server to communicate with them. Which control BEST achieves this?",options:[{l:"A",t:"Network segmentation with access control lists"}, {l:"B",t:"Full disk encryption on each device"}, {l:"C",t:"Host-based antivirus on the imaging server"}, {l:"D",t:"An acceptable use policy covering medical devices"}],answer:"A"},
 {id:"secplus-14",num:14,domain:"Threats & Vulnerabilities",stem:"An attacker compromises a widely used software vendor and inserts malicious code into an update that is then distributed to thousands of customers. Which type of attack does this describe?",options:[{l:"A",t:"Supply chain attack"}, {l:"B",t:"Privilege escalation"}, {l:"C",t:"On-path attack"}, {l:"D",t:"Directory traversal"}],answer:"A"},
 {id:"secplus-15",num:15,domain:"Program Management",stem:"An organization has decided to purchase cyber insurance to offset the financial impact of a ransomware incident it cannot fully prevent. Which risk response is this?",options:[{l:"A",t:"Risk avoidance"}, {l:"B",t:"Risk acceptance"}, {l:"C",t:"Risk transference"}, {l:"D",t:"Risk mitigation"}],answer:"C"},
+
+// Visual question. The calculator resolves the first step (SLE); converting
+// "once every four years" into an ARO and applying it is left to the reader.
+{id:"secplus-16",num:16,domain:"Program Management",stem:"Use the calculator. A server valued at 80,000 would lose 25% of its value in a flood, and floods at this site are expected once every four years. What is the annualized loss expectancy?",options:[{l:"A",t:"5,000"}, {l:"B",t:"20,000"}, {l:"C",t:"25,000"}, {l:"D",t:"80,000"}],answer:"A",
+  figure:{kind:"formula",caption:"This resolves the single loss only — the annual figure is a further step",expression:"SLE = asset value × exposure factor",
+    inputs:[{key:"av",label:"Asset value",min:0,max:200000,step:10000,value:80000},
+            {key:"ef",label:"Exposure factor",min:0,max:1,step:0.05,value:0.25}],
+    outputs:[{label:"Single loss expectancy",headline:true,term:{op:"mul",args:[{ref:"av"},{ref:"ef"}]},
+              note:"What one occurrence costs. ALE = SLE × ARO, and ARO is how many times a year you expect it."}]}},
 ];

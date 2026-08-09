@@ -5,6 +5,7 @@ import { accentById } from "./lib/game";
 import { Session } from "./components/Session";
 import { Shell, type NavItem, type Tab } from "./components/Shell";
 import { Dashboard } from "./components/Dashboard";
+import { Exercises } from "./components/Exercises";
 import { Profile } from "./components/Profile";
 import { MilestoneToast } from "./components/Milestone";
 import { Browse, Flashcards } from "./components/Views";
@@ -12,6 +13,7 @@ import { Browse, Flashcards } from "./components/Views";
 const NAV: NavItem[] = [
   { id: "base", label: "Base" },
   { id: "drill", label: "Drill" },
+  { id: "exercises", label: "Exercises" },
   { id: "cards", label: "Flashcards" },
   { id: "browse", label: "Browse" },
   { id: "profile", label: "Profile" },
@@ -21,6 +23,10 @@ const HEADINGS: Partial<Record<Tab, { h1: string; p: string }>> = {
   drill: {
     h1: "Question drill",
     p: "Answer under a running clock. New cards are worth the most and never break your combo — the queue and the scoring both point at what you do not know yet.",
+  },
+  exercises: {
+    h1: "Concept exercises",
+    p: "Ordering, sorting and telling near-identical concepts apart — retrieval with nothing to eliminate between. Built from the explainers attached to deep explanations, so they grow as the pack does.",
   },
   cards: {
     h1: "Flashcard drill",
@@ -42,6 +48,7 @@ export default function App() {
   const {
     progress,
     answer,
+    completeExercise,
     toggleFlag,
     setExamDate,
     setProfile,
@@ -120,6 +127,10 @@ export default function App() {
           blurb="Sorted by weakness: recent misses, then cards falling due, then the unseen."
           autoStart={handoff > 0 ? 12 : 0}
         />
+      )}
+
+      {tab === "exercises" && (
+        <Exercises key={pack.id} pack={pack} onComplete={completeExercise} />
       )}
 
       {tab === "cards" && (

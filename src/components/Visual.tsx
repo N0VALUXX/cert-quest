@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Tone, Visual as V } from "../types";
+import type { FormulaTerm, Tone, Visual as V } from "../types";
 
 function Detail({ title, body, tone }: { title: string; body: string; tone?: Tone }) {
   return (
@@ -193,6 +193,113 @@ function Ladder({ v }: { v: Extract<V, { kind: "ladder" }> }) {
   );
 }
 
+/** A loop rather than a line: the last stage feeds the first. */
+function Cycle({ v }: { v: Extract<V, { kind: "cycle" }> }) {
+  const [i, setI] = useState(0);
+  const n = v.stages.length;
+  return (
+    <Frame caption={v.caption}>
+      <div className="cycle-ring" style={{ ["--n" as string]: n }}>
+        <div className="cycle-hub" aria-hidden>
+          ↻
+        </div>
+        {v.stages.map((s, k) => (
+          <button
+            key={s.label}
+            className="cycle-node"
+            style={{ ["--i" as string]: k }}
+            aria-pressed={i === k}
+            onClick={() => setI(k)}
+          >
+            <span className="n">{k + 1}</span>
+            {s.label}
+          </button>
+        ))}
+      </div>
+      <Detail title={v.stages[i].label} body={v.stages[i].body} tone="info" />
+    </Frame>
+  );
+}
+
+/** Safe evaluation of the little expression tree. No parsing, no eval. */
+function evalTerm(t: FormulaTerm, vals: Record<string, number>): number {
+  if ("ref" in t) return vals[t.ref] ?? 0;
+  if ("value" in t) return t.value;
+  const a = t.args.map((x) => evalTerm(x, vals));
+  switch (t.op) {
+    case "add":
+      return a.reduce((x, y) => x + y, 0);
+    case "mul":
+      return a.reduce((x, y) => x * y, 1);
+    case "sub":
+      return a.slice(1).reduce((x, y) => x - y, a[0] ?? 0);
+    case "div":
+      return a.slice(1).reduce((x, y) => (y === 0 ? 0 : x / y), a[0] ?? 0);
+    case "pow":
+      return Math.pow(a[0] ?? 0, a[1] ?? 0);
+  }
+}
+
+/** Move the inputs, watch the result move. Beats a worked example in prose. */
+function Formula({ v }: { v: Extract<V, { kind: "formula" }> }) {
+  const [vals, setVals] = useState<Record<string, number>>(() =>
+    Object.fromEntries(v.inputs.map((i) => [i.key, i.value]))
+  );
+
+  return (
+    <Frame caption={v.caption}>
+      <div className="formula-expr">{v.expression}</div>
+
+      <div className="formula-inputs">
+        {v.inputs.map((input) => (
+          <label key={input.key} className="formula-input">
+            <span className="formula-label">
+              {input.label}
+              <b>
+                {input.prefix ?? ""}
+                {vals[input.key].toLocaleString()}
+                {input.unit ? ` ${input.unit}` : ""}
+              </b>
+            </span>
+            <input
+              type="range"
+              min={input.min}
+              max={input.max}
+              step={input.step}
+              value={vals[input.key]}
+              onChange={(e) =>
+                setVals((prev) => ({ ...prev, [input.key]: Number(e.target.value) }))
+              }
+            />
+          </label>
+        ))}
+      </div>
+
+      <div className="formula-outputs">
+        {v.outputs.map((out) => {
+          const n = evalTerm(out.term, vals);
+          const shown = Number.isFinite(n)
+            ? n.toLocaleString(undefined, {
+                minimumFractionDigits: out.decimals ?? 0,
+                maximumFractionDigits: out.decimals ?? 0,
+              })
+            : "—";
+          return (
+            <div key={out.label} className={`formula-out${out.headline ? " headline" : ""}`}>
+              <span className="formula-out-label">{out.label}</span>
+              <b>
+                {shown}
+                {out.unit ? <i> {out.unit}</i> : null}
+              </b>
+              {out.note && <span className="formula-note">{out.note}</span>}
+            </div>
+          );
+        })}
+      </div>
+    </Frame>
+  );
+}
+
 export function VisualBlock({ visual }: { visual: V }) {
   switch (visual.kind) {
     case "steps":
@@ -207,5 +314,9 @@ export function VisualBlock({ visual }: { visual: V }) {
       return <Compare v={visual} />;
     case "ladder":
       return <Ladder v={visual} />;
+    case "cycle":
+      return <Cycle v={visual} />;
+    case "formula":
+      return <Formula v={visual} />;
   }
 }

@@ -254,6 +254,38 @@ export function useProgress() {
     });
   }, []);
 
+  /**
+   * A completed concept exercise. Deliberately does **not** touch `records`:
+   * reordering a ladder is a different retrieval from answering the multiple
+   * choice it came from, and folding it into the same schedule would corrupt
+   * the signal the SRS runs on. It pays XP and counts toward the day.
+   */
+  const completeExercise = useCallback(
+    (pack: CertPack, rounds: number, correct: number, xp: number) => {
+      setProgress((prev) => {
+        const base = rollQuests(prev);
+        const quests: QuestState = {
+          ...base.quests,
+          answered: base.quests.answered + rounds,
+          tracks: base.quests.tracks.includes(pack.id)
+            ? base.quests.tracks
+            : [...base.quests.tracks, pack.id],
+        };
+        let next: Progress = {
+          ...base,
+          quests,
+          xpByPack: { ...base.xpByPack, [pack.id]: (base.xpByPack[pack.id] ?? 0) + xp },
+        };
+        // Day counters take one entry per retrieval decision made.
+        for (let n = 0; n < rounds; n++) {
+          next = recordDay(next, n < correct, n === 0 ? xp : 0);
+        }
+        return next;
+      });
+    },
+    []
+  );
+
   const toggleFlag = useCallback((questionId: string) => {
     setProgress((prev) => ({
       ...prev,
@@ -298,6 +330,7 @@ export function useProgress() {
   return {
     progress,
     answer,
+    completeExercise,
     toggleFlag,
     setExamDate,
     setProfile,

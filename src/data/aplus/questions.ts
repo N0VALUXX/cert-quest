@@ -15,4 +15,13 @@ export const aplusQuestions: Question[] = [
 {id:"aplus-10",num:10,domain:"Operating Systems",stem:"Which requirement must a host system meet to run multiple virtual machines effectively?",options:[{l:"A",t:"Hardware virtualization support enabled in firmware, with sufficient RAM and CPU cores"}, {l:"B",t:"A dedicated physical network card for every virtual machine"}, {l:"C",t:"An identical operating system on the host and every guest"}, {l:"D",t:"A separate physical hard drive for every virtual machine"}],answer:"A"},
 {id:"aplus-11",num:11,domain:"Troubleshooting",stem:"According to the standard troubleshooting methodology, what should a technician do immediately after establishing a theory of probable cause?",options:[{l:"A",t:"Document the findings and outcomes"}, {l:"B",t:"Test the theory to determine the cause"}, {l:"C",t:"Establish a plan of action"}, {l:"D",t:"Verify full system functionality"}],answer:"B"},
 {id:"aplus-12",num:12,domain:"Hardware",stem:"Users report that documents from a laser printer smudge when touched. Which component is MOST likely at fault?",options:[{l:"A",t:"The fuser assembly"}, {l:"B",t:"The transfer roller"}, {l:"C",t:"The pickup roller"}, {l:"D",t:"The toner cartridge"}],answer:"A"},
+
+// Visual question. The calculator gives raw capacity; knowing what RAID 5
+// spends on parity is the part it deliberately does not tell you.
+{id:"aplus-13",num:13,domain:"Hardware",stem:"Use the array calculator. Four 4 TB drives are configured as a single RAID 5 array. How much of that raw capacity is usable for data?",options:[{l:"A",t:"4 TB"}, {l:"B",t:"8 TB"}, {l:"C",t:"12 TB"}, {l:"D",t:"16 TB"}],answer:"C",
+  figure:{kind:"formula",caption:"Raw capacity only — what a RAID level spends is not shown",expression:"raw capacity = drives × drive size",
+    inputs:[{key:"drives",label:"Drives in the array",min:2,max:8,step:1,value:4},
+            {key:"size",label:"Capacity per drive",min:1,max:8,step:1,value:4,unit:"TB"}],
+    outputs:[{label:"Total raw capacity",headline:true,term:{op:"mul",args:[{ref:"drives"},{ref:"size"}]},unit:"TB",
+              note:"Before any mirroring or parity is accounted for."}]}},
 ];

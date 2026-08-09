@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CertPack, Letter, Progress, Question } from "../types";
 import { buildQueue, masteryOf, type QueueMode } from "../lib/srs";
 import { comboAfter, comboMultiplier, nextComboTier, xpForAnswer, xpReason } from "../lib/game";
+import { ageLabel, clearRun, loadRun, saveRun, type SavedRun } from "../lib/resume";
 import { QuestionCard } from "./QuestionCard";
 
 interface Setup {
@@ -9,19 +10,27 @@ interface Setup {
   mode: QueueMode;
 }
 
-const SIZES = [10, 20, 40, 100];
+// 5 is deliberate. A five-question set is far easier to *start* than a ten,
+// and starting is the step that actually fails.
+const SIZES = [5, 10, 20, 40, 100];
 
 function SetupScreen({
   title,
   blurb,
   available,
   mode,
+  parked,
+  onResume,
+  onDiscard,
   onStart,
 }: {
   title: string;
   blurb: string;
   available: number;
   mode: QueueMode;
+  parked: SavedRun | null;
+  onResume: () => void;
+  onDiscard: () => void;
   onStart: (s: Setup) => void;
 }) {
   const [size, setSize] = useState(10);
@@ -46,6 +55,26 @@ function SetupScreen({
       </div>
       <div className="card-body">
         <p style={{ marginTop: 0, color: "var(--muted)" }}>{blurb}</p>
+
+        {parked && (
+          <div className="resume-strip">
+            <div>
+              <span className="eyebrow">Unfinished run</span>
+              <b>
+                {parked.index} of {parked.queue.length} answered · {ageLabel(parked.savedAt)}
+              </b>
+            </div>
+            <div className="resume-actions">
+              <button className="btn primary" onClick={onResume}>
+                Resume
+              </button>
+              <button className="btn ghost" onClick={onDiscard}>
+                Discard
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="size-row" style={{ marginTop: 18 }}>
           {SIZES.filter((s) => s <= available).map((s) => (
             <button
@@ -130,6 +159,25 @@ export function Session({
   const [now, setNow] = useState(0);
   const questionShownAt = useRef(0);
   const [times, setTimes] = useState<number[]>([]);
+  const [parked, setParked] = useState<SavedRun | null>(() => loadRun(pack.id, mode));
+  const [focus, setFocus] = useState(() => {
+    try {
+      return localStorage.getItem("cert-quest:focus:v1") === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleFocus = useCallback(() => {
+    setFocus((f) => {
+      try {
+        localStorage.setItem("cert-quest:focus:v1", f ? "0" : "1");
+      } catch {
+        // A preference that fails to stick is not worth handling further.
+      }
+      return !f;
+    });
+  }, []);
 
   const available = useMemo(
     () => buildQueue(pack.questions, progress, mode, 100_000).length,
@@ -155,9 +203,44 @@ export function Session({
       setStartedAt(t);
       setNow(t);
       questionShownAt.current = t;
+      clearRun();
+      setParked(null);
     },
     [pack, progress]
   );
+
+  /** Rebuild a parked run from its saved question ids. */
+  const resume = useCallback(() => {
+    if (!parked) return;
+    const byId = new Map(pack.questions.map((q) => [q.id, q]));
+    const restored = parked.queue.map((id) => byId.get(id)).filter((q): q is Question => !!q);
+    // A pack edit could have removed a question since the run was parked.
+    if (restored.length !== parked.queue.length) {
+      clearRun();
+      setParked(null);
+      return;
+    }
+    setQueue(restored);
+    setI(parked.index);
+    setResults(parked.results);
+    setCombo(parked.combo);
+    setBestCombo(parked.bestCombo);
+    setRunXp(parked.runXp);
+    setTimes(parked.times);
+    setChosen(null);
+    setRevealed(false);
+    setLastAward(null);
+    const t = Date.now();
+    setStartedAt(t);
+    setNow(t);
+    questionShownAt.current = t;
+    setParked(null);
+  }, [parked, pack.questions]);
+
+  const discardParked = useCallback(() => {
+    clearRun();
+    setParked(null);
+  }, []);
 
   // Kick off immediately when the dashboard sent us here to drill.
   const startRef = useRef(start);
@@ -205,7 +288,35 @@ export function Session({
     setI((n) => n + 1);
   }, []);
 
-  const quit = useCallback(() => setQueue(null), []);
+  // Park the run after every answered question. Leaving, closing the tab, or
+  // being interrupted then costs at most the question you were on.
+  useEffect(() => {
+    if (!queue) return;
+    // A finished run is not worth resuming into.
+    if (i >= queue.length) {
+      clearRun();
+      return;
+    }
+    if (results.length === 0) return;
+    saveRun({
+      packId: pack.id,
+      mode,
+      queue: queue.map((q) => q.id),
+      index: i,
+      results,
+      combo,
+      bestCombo,
+      runXp,
+      times,
+      savedAt: Date.now(),
+    });
+  }, [queue, i, results, combo, bestCombo, runXp, times, pack.id, mode]);
+
+  const quit = useCallback(() => {
+    setQueue(null);
+    // Leaving mid-run keeps the parked copy so it can be picked back up.
+    setParked(loadRun(pack.id, mode));
+  }, [pack.id, mode]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -243,7 +354,16 @@ export function Session({
 
   if (!queue) {
     return (
-      <SetupScreen title={title} blurb={blurb} available={available} mode={mode} onStart={start} />
+      <SetupScreen
+        title={title}
+        blurb={blurb}
+        available={available}
+        mode={mode}
+        parked={parked}
+        onResume={resume}
+        onDiscard={discardParked}
+        onStart={start}
+      />
     );
   }
 
@@ -327,13 +447,21 @@ export function Session({
         >
           {flagged ? "flagged" : "F to flag"}
         </button>
+        <button
+          className="flag-btn"
+          aria-pressed={focus}
+          onClick={toggleFocus}
+          title="Hide everything except the question"
+        >
+          {focus ? "focus on" : "focus"}
+        </button>
       </div>
 
       <div className="progress-bar">
         <i style={{ width: `${pct}%` }} />
       </div>
 
-      <div className="drill-grid" style={{ marginTop: 16 }}>
+      <div className={`drill-grid${focus ? " focus" : ""}`} style={{ marginTop: 16 }}>
         <div style={{ minWidth: 0 }}>
           <QuestionCard
             q={q}

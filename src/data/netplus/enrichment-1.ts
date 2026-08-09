@@ -15,6 +15,51 @@ export const batch1: Record<string, Enrichment> = {
       { label: "RFC 4632 — Classless Inter-domain Routing (CIDR)", url: "https://www.rfc-editor.org/rfc/rfc4632" },
       { label: "RFC 1918 — Address Allocation for Private Internets", url: "https://www.rfc-editor.org/rfc/rfc1918" },
     ],
+    visual: {
+      kind: "formula",
+      caption: "Drag the prefix — everything else falls out of it",
+      expression: "block size = 2 ^ (32 − prefix)",
+      inputs: [
+        { key: "prefix", label: "Prefix length", min: 24, max: 30, step: 1, value: 26, prefix: "/" },
+      ],
+      outputs: [
+        {
+          label: "Host bits",
+          term: { op: "sub", args: [{ value: 32 }, { ref: "prefix" }] },
+          note: "What is left after the network part.",
+        },
+        {
+          label: "Block size",
+          headline: true,
+          term: {
+            op: "pow",
+            args: [{ value: 2 }, { op: "sub", args: [{ value: 32 }, { ref: "prefix" }] }],
+          },
+          note: "Subnets start at 0 and step by this. Find the block containing your address, and its last value is the broadcast.",
+        },
+        {
+          label: "Usable hosts",
+          term: {
+            op: "sub",
+            args: [
+              { op: "pow", args: [{ value: 2 }, { op: "sub", args: [{ value: 32 }, { ref: "prefix" }] }] },
+              { value: 2 },
+            ],
+          },
+          note: "Network and broadcast addresses are not assignable.",
+        },
+        {
+          label: "Subnets per /24",
+          term: {
+            op: "div",
+            args: [
+              { value: 256 },
+              { op: "pow", args: [{ value: 2 }, { op: "sub", args: [{ value: 32 }, { ref: "prefix" }] }] },
+            ],
+          },
+        },
+      ],
+    },
   },
 
   "netplus-9": {

@@ -2262,6 +2262,824 @@ select.btn {
   color: var(--dim);
 }
 
+/* -------------------------- figures (visual stems) ------------------------ */
+
+.figure {
+  margin: 0 0 20px;
+}
+
+.figure .visual {
+  border-color: var(--accent-edge);
+}
+
+/* Prompt mode: the exhibit informs the question without answering it. The
+   explanatory detail is suppressed and the explainer's own navigation is
+   inert, but a formula's sliders stay live because operating the tool is
+   exactly what the question is asking for. */
+.figure.prompt .detail {
+  display: none;
+}
+
+.figure.prompt .step,
+.figure.prompt .rung,
+.figure.prompt .layer,
+.figure.prompt .chip,
+.figure.prompt .cell,
+.figure.prompt .pin,
+.figure.prompt .cycle-node {
+  pointer-events: none;
+}
+
+.figure.prompt .visual-cap::after {
+  content: " — refer to this";
+  color: var(--accent-light);
+}
+
+/* --------------------------------- cycle ---------------------------------- */
+
+.cycle-ring {
+  position: relative;
+  width: clamp(240px, 62vw, 320px);
+  aspect-ratio: 1;
+  margin: 4px auto 14px;
+}
+
+.cycle-hub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px dashed var(--line-bright);
+  display: grid;
+  place-items: center;
+  font-size: 19px;
+  color: var(--dim);
+}
+
+.cycle-node {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 104px;
+  padding: 8px 6px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--raised);
+  font-family: var(--display);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-soft);
+  line-height: 1.25;
+  /* Rotate out to the rim, then counter-rotate so the label stays upright. */
+  transform: translate(-50%, -50%) rotate(calc(var(--i) * 1turn / var(--n)))
+    translateY(calc(-1 * clamp(88px, 23vw, 118px)))
+    rotate(calc(-1 * var(--i) * 1turn / var(--n)));
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.cycle-node:hover {
+  border-color: var(--line-bright);
+}
+
+.cycle-node[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--raised));
+  color: var(--text);
+}
+
+.cycle-node .n {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  margin-bottom: 2px;
+}
+
+.cycle-node[aria-pressed="true"] .n {
+  color: var(--accent-light);
+}
+
+/* -------------------------------- formula --------------------------------- */
+
+.formula-expr {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent-light);
+  padding: 11px 14px;
+  border-radius: var(--r);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border: 1px solid var(--accent-edge);
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+.formula-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.formula-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.formula-label b {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.formula-input input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.formula-outputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 9px;
+}
+
+.formula-out {
+  padding: 11px 13px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.formula-out.headline {
+  border-color: color-mix(in srgb, var(--xp) 50%, var(--line));
+  background: color-mix(in srgb, var(--xp) 9%, var(--surface));
+}
+
+.formula-out-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 4px;
+}
+
+.formula-out b {
+  font-family: var(--mono);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.formula-out.headline b {
+  color: var(--xp);
+}
+
+.formula-out b i {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.formula-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--dim);
+}
+
+/* ------------------------------- exercises -------------------------------- */
+
+.ex-caption {
+  margin: 0 0 14px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.ex-prompt {
+  margin: 0 0 16px;
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ex-round {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dim);
+}
+
+.ex-body {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border-left: 2px solid var(--accent);
+  background: var(--raised);
+  border-radius: 0 var(--r) var(--r) 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-soft);
+}
+
+.ex-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.ex-chip-target {
+  display: inline-block;
+  margin-bottom: 16px;
+  padding: 10px 15px;
+  border-radius: var(--r);
+  background: var(--accent-ghost);
+  border: 1px solid var(--accent-edge);
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-light);
+}
+
+.ex-grid {
+  margin-bottom: 16px;
+}
+
+.ex-grid .cell {
+  min-height: 44px;
+  font-size: 15px;
+}
+
+.cell-right {
+  border-color: var(--pass);
+  background: color-mix(in srgb, var(--pass) 18%, var(--raised));
+  color: var(--pass-hi);
+}
+
+.cell-wrong {
+  border-color: var(--fail);
+  background: color-mix(in srgb, var(--fail) 18%, var(--raised));
+  color: var(--fail);
+}
+
+.order-list {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.order-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--raised);
+}
+
+.order-row.right {
+  border-color: color-mix(in srgb, var(--pass) 55%, var(--line));
+}
+
+.order-row.wrong {
+  border-color: color-mix(in srgb, var(--fail) 55%, var(--line));
+}
+
+.order-n {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  flex: none;
+}
+
+.order-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.order-main b {
+  display: block;
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.order-body {
+  display: block;
+  margin-top: 5px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.order-moves {
+  display: flex;
+  gap: 5px;
+  flex: none;
+}
+
+.move-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.move-btn:hover:not(:disabled) {
+  border-color: var(--accent-edge);
+  color: var(--accent-light);
+}
+
+.move-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.order-verdict {
+  font-size: 12px;
+  color: var(--dim);
+  flex: none;
+}
+
+.ex-score {
+  margin: 4px 0 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.ex-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+/* ---------------------------- resume and focus ---------------------------- */
+
+.resume-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding: 13px 15px;
+  border-radius: var(--r);
+  border: 1px solid var(--accent-edge);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+
+.resume-strip b {
+  display: block;
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.resume-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Focus mode strips the run telemetry so only the question is on screen.
+   The header keeps position and timer — losing those causes its own anxiety. */
+.drill-grid.focus {
+  grid-template-columns: 1fr;
+}
+
+.drill-grid.focus .drill-side {
+  display: none;
+}
+
+/* --------------------------- exercise framework --------------------------- */
+
+.ex-title {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 8px 0 6px;
+}
+
+.ex-instructions {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-quiet);
+}
+
+.pill.mode-learn {
+  background: color-mix(in srgb, var(--pass) 16%, transparent);
+  color: var(--pass-hi);
+}
+.pill.mode-practice {
+  background: var(--accent-ghost);
+  color: var(--accent-light);
+}
+.pill.mode-mastery {
+  background: color-mix(in srgb, var(--xp) 16%, transparent);
+  color: var(--xp-hi);
+}
+.pill.mode-challenge {
+  background: color-mix(in srgb, var(--fail) 18%, transparent);
+  color: var(--fail);
+}
+
+.ex-toolbar {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.ex-progress {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.ex-hints p,
+.ex-feedback p {
+  margin: 0 0 7px;
+}
+
+.ex-hints p:last-child,
+.ex-feedback p:last-child {
+  margin-bottom: 0;
+}
+
+/* ---- cards and zones ---- */
+
+.ex-bank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 13px;
+  border-radius: var(--r);
+  border: 1px dashed var(--line-strong);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  margin-bottom: 16px;
+  min-height: 58px;
+  align-items: flex-start;
+}
+
+.ex-bank-empty {
+  font-size: 12px;
+  color: var(--dim);
+  align-self: center;
+}
+
+.ex-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line-bright);
+  background: var(--raised);
+  color: var(--text-soft);
+  font-size: 12.5px;
+  transition: border-color 0.12s, background 0.12s, transform 0.08s;
+}
+
+.ex-card:hover:not(.placed) {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.ex-card.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, var(--raised));
+  color: var(--text);
+  box-shadow: 0 0 0 2px var(--accent-ghost);
+}
+
+.ex-card.placed {
+  width: 100%;
+  border-style: solid;
+}
+
+.ex-card.right {
+  border-color: var(--pass);
+  background: color-mix(in srgb, var(--pass) 14%, var(--raised));
+}
+
+.ex-card.wrong {
+  border-color: var(--fail);
+  background: color-mix(in srgb, var(--fail) 14%, var(--raised));
+}
+
+.ex-card-label {
+  font-family: var(--display);
+  font-weight: 600;
+}
+
+.ex-card-detail {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.ex-zones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 11px;
+}
+
+.ex-zone {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--panel);
+  padding: 11px;
+  min-height: 128px;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.ex-zone.active {
+  border-color: var(--accent-edge);
+  border-style: dashed;
+}
+
+.ex-zone.over {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+}
+
+.ex-zone-head {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0 0 9px;
+}
+
+.ex-zone-label {
+  display: block;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ex-zone-hint {
+  display: block;
+  font-size: 10.5px;
+  color: var(--dim);
+  margin-top: 2px;
+}
+
+.ex-zone-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ---- matching ---- */
+
+.ex-match {
+  display: grid;
+  grid-template-columns: 1fr minmax(140px, 0.6fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.ex-match-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ex-match-item,
+.ex-match-target {
+  text-align: left;
+  padding: 11px 13px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--raised);
+  color: var(--text-soft);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.ex-match-item.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ghost);
+}
+
+.ex-match-item.right {
+  border-color: var(--pass);
+}
+
+.ex-match-item.wrong {
+  border-color: var(--fail);
+}
+
+.ex-match-link {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--accent-light);
+}
+
+.ex-match-fix {
+  display: block;
+  margin-top: 3px;
+  font-size: 10.5px;
+  color: var(--fail);
+}
+
+.ex-match-target {
+  font-family: var(--display);
+  font-weight: 600;
+}
+
+.ex-match-target.active {
+  border-color: var(--accent-edge);
+  border-style: dashed;
+}
+
+.ex-match-target.taken {
+  opacity: 0.5;
+}
+
+/* ---- diagram answer surface ---- */
+
+.ex-surface {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.ex-surface-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.ex-el {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  padding: 10px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--raised);
+  color: var(--text-soft);
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.ex-el:hover {
+  border-color: var(--accent-edge);
+}
+
+.ex-el.slot {
+  border-style: dashed;
+  border-color: var(--line-bright);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+.ex-el.slot.filled {
+  border-style: solid;
+  border-color: var(--accent-edge);
+}
+
+.ex-el.right {
+  border-color: var(--pass);
+  background: color-mix(in srgb, var(--pass) 12%, var(--raised));
+}
+
+.ex-el.wrong {
+  border-color: var(--fail);
+  background: color-mix(in srgb, var(--fail) 12%, var(--raised));
+}
+
+.ex-el-label {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ex-el.slot .ex-el-label {
+  color: var(--accent-light);
+}
+
+.ex-el-body {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.ex-answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  margin-bottom: 14px;
+}
+
+.ex-answers .right {
+  color: var(--pass);
+}
+
+.ex-answers .wrong {
+  color: var(--fail);
+}
+
+.opt.selectable .key {
+  color: var(--accent-light);
+}
+
+.opt.chosen {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--raised));
+}
+
+/* ---- score breakdown ---- */
+
+.ex-score-lines {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.ex-score-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 13px;
+  font-size: 12px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+}
+
+.ex-score-line:first-child {
+  border-top: 0;
+}
+
+.ex-score-line b {
+  font-family: var(--mono);
+  color: var(--pass);
+}
+
+.ex-score-line b.neg {
+  color: var(--fail);
+}
+
+.ex-score-line.total {
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ex-score-line.total b {
+  color: var(--text);
+}
+
 /* ------------------------------- responsive ------------------------------ */
 
 @media (max-width: 820px) {
@@ -2385,5 +3203,19 @@ select.btn {
 
   .track-cards {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  /* Matching stacks: the two columns become source then targets, which keeps
+     pick-then-place working without horizontal scrolling. */
+  .ex-match {
+    grid-template-columns: 1fr;
+  }
+
+  .ex-zones {
+    grid-template-columns: 1fr;
+  }
+
+  .ex-zone {
+    min-height: 0;
   }
 }

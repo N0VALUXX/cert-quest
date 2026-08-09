@@ -16,9 +16,9 @@ export const batch2: Record<string, Enrichment> = {
       { label: "ISO/IEC 27001 — Information Security Management", url: "https://www.iso.org/standard/27001" },
     ],
     visual: {
-      kind: "steps",
-      caption: "Plan-Do-Check-Act — identify the phase by its verb",
-      steps: [
+      kind: "cycle",
+      caption: "Plan-Do-Check-Act — identify the phase by its verb, and note it never ends",
+      stages: [
         { label: "Plan — establish", body: "Set the business continuity policy, objectives, targets, controls, processes, and procedures. Nothing is running yet; this is design. Option D lives here." },
         { label: "Do — implement", body: "Put the policy, controls, processes, and procedures into operation. The verb is implement. This is the answer to this question." },
         { label: "Check — monitor and report", body: "Measure performance against the policy and objectives, report results to management, and authorize remediation. Option B lives here." },

@@ -115,6 +115,15 @@ export function QuestionCard({
         <span className="domain-tag">{q.domain}</span>
         <p className="stem">{q.stem}</p>
 
+        {q.figure && (
+          // Before the reveal the figure runs in prompt mode: structure and
+          // any tool stay usable, the explanatory bodies are hidden so the
+          // exhibit cannot double as an answer key.
+          <div className={`figure${revealed ? "" : " prompt"}`}>
+            <VisualBlock visual={q.figure} />
+          </div>
+        )}
+
         <div className="options">
           {q.options.map((o) => {
             const isAnswer = o.l === q.answer;
